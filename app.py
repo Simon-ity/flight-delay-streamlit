@@ -1,7 +1,6 @@
 """
 Flight Delay Predictor — Streamlit App
 Asian Avengers · CIS 412 · Spring 2026
-Design inspired by FlightFlow (Viktoria Zhebit, Behance)
 """
 import streamlit as st
 import pandas as pd
@@ -18,7 +17,7 @@ st.set_page_config(
 )
 
 # =============================================================================
-# FlightFlow-inspired theme — deep navy, cream accent, editorial type
+# Theme — deep navy, cream accent, editorial type
 # =============================================================================
 st.markdown("""
 <style>
@@ -26,10 +25,10 @@ st.markdown("""
     #MainMenu, footer, header { visibility: hidden; }
     .stDeployButton { display: none; }
 
-    /* Import Playfair Display for editorial serif headlines */
+    /* Import fonts */
     @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700;900&family=Inter:wght@300;400;500;600;700&display=swap');
 
-    /* Base — deep navy background */
+    /* Base */
     .main, .stApp {
         background: #0E1116 !important;
         color: #E8E0D2;
@@ -42,7 +41,7 @@ st.markdown("""
     }
 
     /* Typography */
-    body, p, div, label, .stMarkdown {
+    body, p, .stMarkdown {
         font-family: 'Inter', -apple-system, sans-serif !important;
         color: #E8E0D2 !important;
     }
@@ -65,11 +64,6 @@ st.markdown("""
         font-weight: 500 !important;
     }
 
-    h3 {
-        font-size: 1.4rem !important;
-        font-weight: 500 !important;
-    }
-
     /* Eyebrow / kicker text */
     .eyebrow {
         font-family: 'Inter', sans-serif;
@@ -81,25 +75,17 @@ st.markdown("""
         margin-bottom: 1rem;
     }
 
-    /* Subtitle muted */
+    /* Subtitle */
     .subtitle {
         font-size: 1.05rem;
-        color: #9A9486;
+        color: #9A9486 !important;
         line-height: 1.6;
         max-width: 620px;
         margin-top: 1rem;
     }
 
-    /* Cards — boarding pass style */
-    .card {
-        background: #161B22;
-        border: 1px solid rgba(232, 224, 210, 0.06);
-        border-radius: 18px;
-        padding: 2.2rem 2rem;
-    }
-
-    /* Form field labels */
-    label {
+    /* Form labels — only direct widget labels, not nested popover content */
+    .stSelectbox > label, .stSlider > label, .stNumberInput > label {
         font-size: 0.7rem !important;
         font-weight: 600 !important;
         letter-spacing: 0.18em !important;
@@ -108,25 +94,58 @@ st.markdown("""
         margin-bottom: 0.4rem !important;
     }
 
-    /* Inputs */
-    .stSelectbox > div > div,
-    .stNumberInput > div > div > input,
-    .stTextInput > div > div > input {
+    /* Selectbox CLOSED state — the always-visible field */
+    div[data-baseweb="select"] > div:first-child {
+        background: #161B22 !important;
+        border: 1px solid rgba(232, 224, 210, 0.08) !important;
+        border-radius: 10px !important;
+        min-height: 44px !important;
+    }
+    div[data-baseweb="select"] > div:first-child:hover {
+        border-color: rgba(201, 167, 122, 0.4) !important;
+    }
+    div[data-baseweb="select"] [role="combobox"],
+    div[data-baseweb="select"] [aria-selected="true"] {
+        color: #E8E0D2 !important;
+        background: transparent !important;
+    }
+
+    /* Selectbox OPEN POPOVER (the dropdown options panel) */
+    div[data-baseweb="popover"] {
+        background: #161B22 !important;
+    }
+    ul[role="listbox"] {
+        background: #161B22 !important;
+        border: 1px solid rgba(201, 167, 122, 0.25) !important;
+        border-radius: 10px !important;
+        padding: 0.25rem !important;
+    }
+    li[role="option"] {
+        background: transparent !important;
+        color: #E8E0D2 !important;
+        font-family: 'Inter', sans-serif !important;
+        font-size: 0.95rem !important;
+        padding: 0.6rem 0.85rem !important;
+        border-radius: 6px !important;
+    }
+    li[role="option"]:hover {
+        background: rgba(201, 167, 122, 0.15) !important;
+        color: #E8E0D2 !important;
+    }
+    li[role="option"][aria-selected="true"] {
+        background: rgba(201, 167, 122, 0.2) !important;
+        color: #C9A77A !important;
+    }
+
+    /* Number input */
+    .stNumberInput input {
         background: #161B22 !important;
         border: 1px solid rgba(232, 224, 210, 0.08) !important;
         border-radius: 10px !important;
         color: #E8E0D2 !important;
-        padding: 0.65rem 0.85rem !important;
-        font-size: 0.95rem !important;
-        font-weight: 500 !important;
     }
 
-    .stSelectbox > div > div:hover,
-    .stNumberInput > div > div > input:hover {
-        border-color: rgba(201, 167, 122, 0.4) !important;
-    }
-
-    /* Slider — cream/champagne accent */
+    /* Slider */
     .stSlider [data-baseweb="slider"] [role="slider"] {
         background-color: #C9A77A !important;
         box-shadow: 0 0 0 4px rgba(201, 167, 122, 0.15) !important;
@@ -140,39 +159,51 @@ st.markdown("""
         font-size: 0.7rem !important;
     }
 
-    /* Checkbox */
-    .stCheckbox > label > div:first-child {
-        background: #161B22 !important;
-        border: 1px solid rgba(232, 224, 210, 0.15) !important;
-    }
-    .stCheckbox > label {
+    /* Checkbox label */
+    .stCheckbox label {
         color: #E8E0D2 !important;
-        font-size: 0.85rem !important;
-        text-transform: none !important;
-        letter-spacing: 0 !important;
+        font-size: 0.9rem !important;
+        font-weight: 400 !important;
+    }
+    .stCheckbox label > div:first-child {
+        background: #161B22 !important;
+        border-color: rgba(232, 224, 210, 0.2) !important;
     }
 
-    /* Big primary button */
+    /* Predict button — DARKER, high-contrast */
     .stButton > button {
-        background: #E8E0D2 !important;
-        color: #0E1116 !important;
-        border: none !important;
-        padding: 1rem 2rem !important;
+        background: #1E1B16 !important;
+        color: #E8E0D2 !important;
+        border: 2px solid #C9A77A !important;
+        padding: 1.1rem 2rem !important;
         font-family: 'Inter', sans-serif !important;
-        font-size: 0.85rem !important;
-        font-weight: 600 !important;
+        font-size: 0.9rem !important;
+        font-weight: 700 !important;
         letter-spacing: 0.25em !important;
         text-transform: uppercase !important;
         border-radius: 14px !important;
-        transition: transform 0.15s ease, background 0.15s ease;
+        transition: all 0.2s ease;
+        box-shadow: 0 4px 20px rgba(201, 167, 122, 0.15);
     }
     .stButton > button:hover {
         background: #C9A77A !important;
+        border-color: #C9A77A !important;
         color: #0E1116 !important;
-        transform: translateY(-1px);
+        transform: translateY(-2px);
+        box-shadow: 0 8px 28px rgba(201, 167, 122, 0.4) !important;
+    }
+    .stButton > button:active {
+        transform: translateY(0);
+    }
+    .stButton > button:focus,
+    .stButton > button:focus:not(:active) {
+        background: #1E1B16 !important;
+        color: #E8E0D2 !important;
+        border-color: #C9A77A !important;
+        box-shadow: 0 0 0 3px rgba(201, 167, 122, 0.3) !important;
     }
 
-    /* Divider line */
+    /* Divider */
     hr {
         border: none !important;
         border-top: 1px solid rgba(232, 224, 210, 0.08) !important;
@@ -261,7 +292,7 @@ st.markdown("""
         border: 1px solid rgba(201, 167, 122, 0.3);
     }
 
-    /* Detail rows in ticket */
+    /* Detail rows */
     .detail-row {
         display: flex;
         justify-content: space-between;
@@ -303,17 +334,6 @@ st.markdown("""
         color: #6E6A5E;
         margin-top: 0.5rem;
     }
-
-    /* Footer */
-    .footer {
-        margin-top: 5rem;
-        padding-top: 2rem;
-        border-top: 1px solid rgba(232, 224, 210, 0.06);
-        font-size: 0.75rem;
-        letter-spacing: 0.15em;
-        text-transform: uppercase;
-        color: #6E6A5E;
-    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -334,7 +354,7 @@ models = load_model()
 info = load_data_info()
 
 # =============================================================================
-# HERO SECTION
+# HERO
 # =============================================================================
 st.markdown("<div class='eyebrow'>ASIAN AVENGERS · CIS 412 · SPRING 2026</div>", unsafe_allow_html=True)
 st.markdown("<h1>Predicting Flight Delays<br/><em style='font-style:italic;color:#C9A77A;'>Before Takeoff</em></h1>", unsafe_allow_html=True)
@@ -350,7 +370,7 @@ st.markdown(
 st.markdown("<br>", unsafe_allow_html=True)
 
 # =============================================================================
-# MODEL TOGGLE — top of page, not sidebar
+# MODEL TOGGLE + STATS
 # =============================================================================
 top_col1, top_col2 = st.columns([3, 1])
 with top_col2:
@@ -358,10 +378,8 @@ with top_col2:
         "MODEL",
         options=['random_forest', 'logistic_regression'],
         format_func=lambda x: 'Random Forest' if x == 'random_forest' else 'Logistic Regression',
-        label_visibility='visible',
     )
 
-# Performance tiles
 metrics = info['model_metrics'][model_choice]
 m_col1, m_col2, m_col3, m_col4 = st.columns(4)
 with m_col1:
@@ -396,7 +414,7 @@ with m_col4:
 st.markdown("<hr>", unsafe_allow_html=True)
 
 # =============================================================================
-# FORM SECTION
+# FORM
 # =============================================================================
 st.markdown("<div class='eyebrow'>FLIGHT PARAMETERS</div>", unsafe_allow_html=True)
 st.markdown("<h2>Flight Details</h2>", unsafe_allow_html=True)
@@ -501,12 +519,8 @@ if st.button("RUN PREDICTION", use_container_width=True):
     delay_prob = probabilities[1]
     ontime_prob = probabilities[0]
 
-    # =========================================================================
-    # Boarding-pass-style result card
-    # =========================================================================
     st.markdown("<br>", unsafe_allow_html=True)
 
-    # Status determination
     if delay_prob >= 0.7:
         status_text = "HIGH DELAY RISK"
         status_class = "status-delayed"
@@ -563,7 +577,7 @@ if st.button("RUN PREDICTION", use_container_width=True):
             </div>
             <div class='detail-row'>
                 <div class='detail-label'>Weather</div>
-                <div class='detail-value'>{'⚠ Adverse' if weather else 'Clear'}</div>
+                <div class='detail-value'>{'Adverse' if weather else 'Clear'}</div>
             </div>
             <div class='detail-row'>
                 <div class='detail-label'>On-Time Probability</div>
@@ -576,13 +590,3 @@ if st.button("RUN PREDICTION", use_container_width=True):
         </div>
     </div>
     """, unsafe_allow_html=True)
-
-# =============================================================================
-# Footer
-# =============================================================================
-st.markdown("""
-<div class='footer'>
-    Trained on 2,201 flights · DC → NY corridor · January 2004<br/>
-    For educational purposes only · CIS 412 final project
-</div>
-""", unsafe_allow_html=True)
