@@ -5,6 +5,7 @@ Asian Avengers · CIS 412 · Spring 2026
 import streamlit as st
 import pandas as pd
 import pickle
+from datetime import date, datetime
 import streamlit.components.v1 as components
 
 # =============================================================================
@@ -89,7 +90,7 @@ st.markdown("""
     }
 
     /* Form labels */
-    .stSelectbox > label, .stSlider > label, .stNumberInput > label {
+    .stSelectbox > label, .stSlider > label, .stNumberInput > label, .stDateInput > label {
         font-size: 0.7rem !important; font-weight: 600 !important;
         letter-spacing: 0.18em !important; text-transform: uppercase !important;
         color: #9A9486 !important; margin-bottom: 0.4rem !important;
@@ -124,6 +125,37 @@ st.markdown("""
     }
     li[role="option"][aria-selected="true"] {
         background: rgba(201, 167, 122, 0.2) !important; color: #C9A77A !important;
+    }
+
+    /* Date input — same dark/cream styling */
+    .stDateInput > div > div {
+        background: #161B22 !important;
+        border: 1px solid rgba(232, 224, 210, 0.08) !important;
+        border-radius: 10px !important;
+    }
+    .stDateInput > div > div:hover {
+        border-color: rgba(201, 167, 122, 0.4) !important;
+    }
+    .stDateInput input {
+        background: transparent !important;
+        color: #E8E0D2 !important;
+        font-family: 'Inter', sans-serif !important;
+    }
+    /* Calendar popover */
+    div[data-baseweb="calendar"] {
+        background: #161B22 !important;
+        border: 1px solid rgba(201, 167, 122, 0.25) !important;
+    }
+    div[data-baseweb="calendar"] button {
+        color: #E8E0D2 !important;
+        background: transparent !important;
+    }
+    div[data-baseweb="calendar"] button:hover {
+        background: rgba(201, 167, 122, 0.15) !important;
+    }
+    div[data-baseweb="calendar"] [aria-selected="true"] {
+        background: #C9A77A !important;
+        color: #0E1116 !important;
     }
 
     .stNumberInput input {
@@ -261,23 +293,51 @@ col1, col2 = st.columns(2)
 
 with col1:
     carrier_dict = info['categorical_unique_values']['CARRIER']
-    carrier_label = st.selectbox("Carrier", options=list(carrier_dict.keys()), format_func=lambda code: carrier_dict[code], index=2)
+    carrier_label = st.selectbox(
+        "Carrier",
+        options=list(carrier_dict.keys()),
+        format_func=lambda code: carrier_dict[code],
+        index=2,
+    )
 
     origin_dict = info['categorical_unique_values']['ORIGIN']
-    origin_label = st.selectbox("Origin Airport", options=list(origin_dict.keys()), format_func=lambda code: origin_dict[code], index=1)
+    origin_label = st.selectbox(
+        "Origin Airport",
+        options=list(origin_dict.keys()),
+        format_func=lambda code: origin_dict[code],
+        index=1,
+    )
 
     dest_dict = info['categorical_unique_values']['DEST']
-    dest_label = st.selectbox("Destination Airport", options=list(dest_dict.keys()), format_func=lambda code: dest_dict[code], index=1)
+    dest_label = st.selectbox(
+        "Destination Airport",
+        options=list(dest_dict.keys()),
+        format_func=lambda code: dest_dict[code],
+        index=1,
+    )
 
     distance_min, distance_max, distance_default = info['numeric_ranges']['DISTANCE']
     distance = st.slider("Flight Distance (Miles)", distance_min, distance_max, distance_default)
 
 with col2:
-    day_dict = info['categorical_unique_values']['DAY_WEEK']
-    day_week = st.selectbox("Day of Week", options=list(day_dict.keys()), format_func=lambda d: day_dict[d], index=2)
+    # ---- SINGLE date picker replaces Day of Week + Day of Month ----
+    # Training data was January 2004; we let users pick any date and derive both fields
+    flight_date = st.date_input(
+        "Flight Date",
+        value=date(2004, 1, 15),         # default mid-January 2004
+        min_value=date(2004, 1, 1),
+        max_value=date(2004, 1, 31),
+        help="Training data covers January 2004. Pick any date in that range.",
+    )
 
-    dom_min, dom_max, dom_default = info['numeric_ranges']['DAY_OF_MONTH']
-    day_of_month = st.slider("Day of Month", dom_min, dom_max, dom_default)
+    # Derive day_week (1=Monday ... 7=Sunday) and day_of_month from the picked date
+    # Python's weekday(): Mon=0...Sun=6 → add 1 to match the dataset's 1=Mon...7=Sun
+    day_week = flight_date.weekday() + 1
+    day_of_month = flight_date.day
+
+    # Show user what was derived (read-only display)
+    day_dict = info['categorical_unique_values']['DAY_WEEK']
+    st.caption(f"📅 {day_dict[day_week]} · Day {day_of_month} of January 2004")
 
     h_min, h_max, h_default = info['numeric_ranges']['CRS_DEP_HOUR']
     dep_hour = st.slider("Scheduled Departure Hour", h_min, h_max, h_default)
@@ -341,48 +401,40 @@ if st.button("RUN PREDICTION", use_container_width=True):
         glow_color = "rgba(124, 196, 142, 0.4)"
 
     formatted_time = f"{dep_hour:02d}:{dep_minute:02d}"
+    formatted_date = flight_date.strftime("%b %d, %Y")
     carrier_name = carrier_dict[carrier_label]
     day_name = day_dict[day_week]
     weather_text = "Adverse" if weather else "Clear"
     model_name = "Random Forest" if model_choice == "random_forest" else "Logistic Regression"
 
-    # =========================================================================
-    # Render the tilt-card via Streamlit's HTML component (gives JS access)
-    # =========================================================================
     tilt_card_html = f"""
     <!DOCTYPE html>
     <html>
     <head>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700;900&family=Inter:wght@300;400;500;600;700&display=swap');
-
         * {{ box-sizing: border-box; margin: 0; padding: 0; }}
-
         body {{
             background: transparent;
             font-family: 'Inter', sans-serif;
             display: flex;
             justify-content: center;
             align-items: center;
-            min-height: 560px;
+            min-height: 580px;
             padding: 1rem;
             perspective: 1500px;
         }}
-
-        /* Card container — 3D context */
         .tilt-wrapper {{
             width: 420px;
-            height: 540px;
+            height: 560px;
             perspective: 1500px;
             opacity: 0;
             transform: translateY(20px);
             animation: cardEnter 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.1s forwards;
         }}
-
         @keyframes cardEnter {{
             to {{ opacity: 1; transform: translateY(0); }}
         }}
-
         .tilt-card {{
             width: 100%;
             height: 100%;
@@ -393,13 +445,9 @@ if st.button("RUN PREDICTION", use_container_width=True):
             border: 1px solid rgba(232, 224, 210, 0.08);
             transform-style: preserve-3d;
             transition: transform 0.15s cubic-bezier(0.16, 1, 0.3, 1);
-            box-shadow:
-                0 20px 60px rgba(0, 0, 0, 0.5),
-                0 0 60px {glow_color};
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), 0 0 60px {glow_color};
             cursor: pointer;
         }}
-
-        /* Top accent line */
         .tilt-card::before {{
             content: '';
             position: absolute;
@@ -407,25 +455,17 @@ if st.button("RUN PREDICTION", use_container_width=True):
             background: linear-gradient(90deg, #C9A77A, #E8E0D2, #C9A77A);
             z-index: 5;
         }}
-
-        /* Mouse-tracked shine effect */
         .shine {{
             position: absolute;
             top: 0; left: 0; right: 0; bottom: 0;
             border-radius: 24px;
-            background: radial-gradient(
-                circle at var(--mx, 50%) var(--my, 50%),
-                rgba(201, 167, 122, 0.18) 0%,
-                rgba(201, 167, 122, 0) 50%
-            );
+            background: radial-gradient(circle at var(--mx, 50%) var(--my, 50%), rgba(201, 167, 122, 0.18) 0%, rgba(201, 167, 122, 0) 50%);
             opacity: 0;
             transition: opacity 0.3s ease;
             pointer-events: none;
             z-index: 4;
         }}
         .tilt-card:hover .shine {{ opacity: 1; }}
-
-        /* Image banner */
         .card-image-wrap {{
             position: relative;
             height: 180px;
@@ -493,13 +533,10 @@ if st.button("RUN PREDICTION", use_container_width=True):
             font-size: 0.85rem;
             border: 1px solid rgba(201,167,122,0.3);
         }}
-
-        /* Body */
         .card-body {{
             padding: 1.25rem 1.75rem 1.5rem 1.75rem;
             transform: translateZ(30px);
         }}
-
         .prob-row {{
             display: flex;
             justify-content: space-between;
@@ -537,7 +574,6 @@ if st.button("RUN PREDICTION", use_container_width=True):
             margin-top: 0.3rem;
             text-align: right;
         }}
-
         .status-pill {{
             display: inline-block;
             padding: 0.4rem 1rem;
@@ -551,7 +587,6 @@ if st.button("RUN PREDICTION", use_container_width=True):
             color: {status_color};
             border: 1px solid {status_color}55;
         }}
-
         .detail-row {{
             display: flex;
             justify-content: space-between;
@@ -576,8 +611,6 @@ if st.button("RUN PREDICTION", use_container_width=True):
         <div class='tilt-wrapper' id='wrapper'>
             <div class='tilt-card' id='card'>
                 <div class='shine' id='shine'></div>
-
-                <!-- Image banner -->
                 <div class='card-image-wrap'>
                     <img src='{TICKET_IMAGE}' alt='Flight'/>
                     <div class='card-image-overlay'>
@@ -589,8 +622,6 @@ if st.button("RUN PREDICTION", use_container_width=True):
                         </div>
                     </div>
                 </div>
-
-                <!-- Body -->
                 <div class='card-body'>
                     <div class='prob-row'>
                         <div>
@@ -603,15 +634,14 @@ if st.button("RUN PREDICTION", use_container_width=True):
                             <div class='time-label'>DEPARTURE</div>
                         </div>
                     </div>
-
                     <div>
                         <div class='detail-row'>
                             <div class='detail-label'>Carrier</div>
                             <div class='detail-value'>{carrier_name}</div>
                         </div>
                         <div class='detail-row'>
-                            <div class='detail-label'>Day</div>
-                            <div class='detail-value'>{day_name}, Day {day_of_month}</div>
+                            <div class='detail-label'>Date</div>
+                            <div class='detail-value'>{day_name}, {formatted_date}</div>
                         </div>
                         <div class='detail-row'>
                             <div class='detail-label'>Distance</div>
@@ -629,33 +659,23 @@ if st.button("RUN PREDICTION", use_container_width=True):
                 </div>
             </div>
         </div>
-
         <script>
-            // 3D tilt effect — card rotates based on cursor position
             const wrapper = document.getElementById('wrapper');
             const card = document.getElementById('card');
             const shine = document.getElementById('shine');
-
-            const TILT_RANGE = 12; // degrees of rotation max
-
+            const TILT_RANGE = 12;
             wrapper.addEventListener('mousemove', (e) => {{
                 const rect = card.getBoundingClientRect();
                 const x = e.clientX - rect.left;
                 const y = e.clientY - rect.top;
-
-                // Calculate rotation based on cursor position relative to card center
                 const centerX = rect.width / 2;
                 const centerY = rect.height / 2;
                 const rotateY = ((x - centerX) / centerX) * TILT_RANGE;
                 const rotateX = -((y - centerY) / centerY) * TILT_RANGE;
-
                 card.style.transform = `rotateX(${{rotateX}}deg) rotateY(${{rotateY}}deg) scale3d(1.02, 1.02, 1.02)`;
-
-                // Update shine position to follow cursor
                 shine.style.setProperty('--mx', `${{(x / rect.width) * 100}}%`);
                 shine.style.setProperty('--my', `${{(y / rect.height) * 100}}%`);
             }});
-
             wrapper.addEventListener('mouseleave', () => {{
                 card.style.transform = 'rotateX(0) rotateY(0) scale3d(1, 1, 1)';
             }});
@@ -664,4 +684,4 @@ if st.button("RUN PREDICTION", use_container_width=True):
     </html>
     """
 
-    components.html(tilt_card_html, height=580)
+    components.html(tilt_card_html, height=600)
