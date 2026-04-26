@@ -17,10 +17,10 @@ st.set_page_config(
 )
 
 # =============================================================================
-# Hero image URLs (Unsplash, free for commercial use, direct CDN)
+# Image URLs (Unsplash CDN, free for commercial use, no attribution required)
 # =============================================================================
 HERO_IMAGE = "https://images.unsplash.com/photo-1436491865332-7a61a109cc05?auto=format&fit=crop&w=2400&q=80"
-ACCENT_IMAGE = "https://images.unsplash.com/photo-1569154941061-e231b4725ef1?auto=format&fit=crop&w=1200&q=80"
+TICKET_IMAGE = "https://images.unsplash.com/photo-1569154941061-e231b4725ef1?auto=format&fit=crop&w=1600&q=80"
 
 # =============================================================================
 # Theme — deep navy, cream accent, editorial type
@@ -218,7 +218,7 @@ st.markdown("""
         border-color: rgba(232, 224, 210, 0.2) !important;
     }
 
-    /* Predict button — DARK with gold border */
+    /* Predict button */
     .stButton > button {
         background: #1E1B16 !important;
         color: #E8E0D2 !important;
@@ -256,7 +256,7 @@ st.markdown("""
         background: linear-gradient(145deg, #1A1F2A 0%, #161B22 100%);
         border: 1px solid rgba(232, 224, 210, 0.08);
         border-radius: 24px;
-        padding: 3rem;
+        padding: 0;
         position: relative;
         overflow: hidden;
         margin-top: 1rem;
@@ -266,38 +266,81 @@ st.markdown("""
         position: absolute;
         top: 0; left: 0; right: 0; height: 4px;
         background: linear-gradient(90deg, #C9A77A, #E8E0D2, #C9A77A);
+        z-index: 3;
     }
 
-    .route-display {
+    /* Image banner inside ticket */
+    .ticket-image-wrap {
+        position: relative;
+        height: 220px;
+        overflow: hidden;
+    }
+    .ticket-image-wrap img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        filter: brightness(0.5) saturate(0.85);
+    }
+    .ticket-image-wrap::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(180deg, rgba(14,17,22,0.3) 0%, rgba(26,31,42,1) 100%);
+    }
+    .ticket-image-overlay {
+        position: absolute;
+        top: 0; left: 0; right: 0; bottom: 0;
+        z-index: 2;
+        padding: 2.5rem 3rem 1.5rem 3rem;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+    }
+    .ticket-image-eyebrow {
+        font-family: 'Inter', sans-serif;
+        font-size: 0.7rem;
+        font-weight: 600;
+        letter-spacing: 0.25em;
+        text-transform: uppercase;
+        color: #C9A77A;
+    }
+    .ticket-route {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        margin: 1.5rem 0;
     }
-    .route-code {
+    .ticket-route-code {
         font-family: 'Playfair Display', serif;
         font-size: 3rem;
         font-weight: 700;
         color: #E8E0D2;
         letter-spacing: 0.05em;
+        text-shadow: 0 2px 12px rgba(0,0,0,0.5);
     }
-    .route-line {
+    .ticket-route-line {
         flex: 1;
         margin: 0 1.5rem;
         position: relative;
         height: 1px;
-        background: rgba(232, 224, 210, 0.2);
+        background: rgba(232, 224, 210, 0.4);
     }
-    .route-line::before {
+    .ticket-route-line::before {
         content: '✈';
         position: absolute;
         left: 50%;
         top: 50%;
         transform: translate(-50%, -50%);
-        background: #1A1F2A;
-        padding: 0 0.8rem;
+        background: rgba(14,17,22,0.85);
+        padding: 0.4rem 0.8rem;
+        border-radius: 100px;
         color: #C9A77A;
-        font-size: 1.2rem;
+        font-size: 1rem;
+        border: 1px solid rgba(201,167,122,0.3);
+    }
+
+    /* Ticket body (below image) */
+    .ticket-body {
+        padding: 2rem 3rem 3rem 3rem;
     }
 
     .prob-display {
@@ -386,7 +429,6 @@ info = load_data_info()
 # =============================================================================
 # HERO
 # =============================================================================
-st.markdown("<div class='eyebrow'>ASIAN AVENGERS · CIS 412 · SPRING 2026</div>", unsafe_allow_html=True)
 st.markdown("<h1>Predicting Flight Delays<br/><em style='font-style:italic;color:#C9A77A;'>Before Takeoff</em></h1>", unsafe_allow_html=True)
 st.markdown(
     "<p class='subtitle'>"
@@ -397,16 +439,17 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# Hero image with overlay
-st.markdown(f"""
-<div class='hero-image-wrap'>
-    <img src='{HERO_IMAGE}' alt='Aerial flight view'/>
-    <div class='hero-overlay'>
-        <div class='hero-overlay-title'>"Predict the unpredictable."</div>
-        <div class='hero-overlay-sub'>MACHINE LEARNING · AVIATION · OPERATIONS</div>
-    </div>
-</div>
-""", unsafe_allow_html=True)
+# Hero image
+st.markdown(
+    f"<div class='hero-image-wrap'>"
+    f"<img src='{HERO_IMAGE}' alt='Aerial flight view'/>"
+    f"<div class='hero-overlay'>"
+    f"<div class='hero-overlay-title'>\"Predict the unpredictable.\"</div>"
+    f"<div class='hero-overlay-sub'>MACHINE LEARNING · AVIATION · OPERATIONS</div>"
+    f"</div>"
+    f"</div>",
+    unsafe_allow_html=True,
+)
 
 # =============================================================================
 # MODEL TOGGLE + STATS
@@ -494,7 +537,7 @@ def build_input_row(carrier, origin, dest, distance, weather, day_week,
 
 
 # =============================================================================
-# Predict button + result card (split into chunks to avoid Streamlit HTML escape)
+# Predict button + result card
 # =============================================================================
 if st.button("RUN PREDICTION", use_container_width=True):
     input_df = build_input_row(
@@ -524,17 +567,25 @@ if st.button("RUN PREDICTION", use_container_width=True):
     weather_text = "Adverse" if weather else "Clear"
     model_name = "Random Forest" if model_choice == "random_forest" else "Logistic Regression"
 
-    # CRITICAL: render the entire ticket as a SINGLE compact f-string with NO blank lines
-    # (Streamlit treats blank lines inside markdown as code blocks, which caused the raw HTML bug)
+    # Build entire ticket as ONE concatenated string with NO blank lines
+    # (blank lines inside a markdown block break Streamlit's HTML rendering)
     ticket_html = (
         "<div class='ticket'>"
-        "<div class='eyebrow'>PREDICTION RESULT</div>"
-        "<div class='route-display'>"
-        f"<div class='route-code'>{origin_label}</div>"
-        "<div class='route-line'></div>"
-        f"<div class='route-code'>{dest_label}</div>"
+        # ----- Image banner with route overlay -----
+        "<div class='ticket-image-wrap'>"
+        f"<img src='{TICKET_IMAGE}' alt='Flight'/>"
+        "<div class='ticket-image-overlay'>"
+        "<div class='ticket-image-eyebrow'>PREDICTION RESULT</div>"
+        "<div class='ticket-route'>"
+        f"<div class='ticket-route-code'>{origin_label}</div>"
+        "<div class='ticket-route-line'></div>"
+        f"<div class='ticket-route-code'>{dest_label}</div>"
         "</div>"
-        "<div style='display:flex; justify-content:space-between; align-items:flex-end; margin: 2rem 0;'>"
+        "</div>"
+        "</div>"
+        # ----- Ticket body -----
+        "<div class='ticket-body'>"
+        "<div style='display:flex; justify-content:space-between; align-items:flex-end; margin-bottom: 2rem;'>"
         "<div>"
         f"<div class='prob-display' style='color:{status_color};'>{delay_prob*100:.1f}%</div>"
         "<div class='stat-label'>DELAY PROBABILITY</div>"
@@ -545,13 +596,14 @@ if st.button("RUN PREDICTION", use_container_width=True):
         "<div class='stat-label'>SCHEDULED DEPARTURE</div>"
         "</div>"
         "</div>"
-        "<div style='margin-top: 2rem;'>"
+        "<div>"
         f"<div class='detail-row'><div class='detail-label'>Carrier</div><div class='detail-value'>{carrier_name}</div></div>"
         f"<div class='detail-row'><div class='detail-label'>Day</div><div class='detail-value'>{day_name}, Day {day_of_month}</div></div>"
         f"<div class='detail-row'><div class='detail-label'>Distance</div><div class='detail-value'>{distance} miles</div></div>"
         f"<div class='detail-row'><div class='detail-label'>Weather</div><div class='detail-value'>{weather_text}</div></div>"
         f"<div class='detail-row'><div class='detail-label'>On-Time Probability</div><div class='detail-value'>{ontime_prob*100:.1f}%</div></div>"
         f"<div class='detail-row'><div class='detail-label'>Model</div><div class='detail-value'>{model_name}</div></div>"
+        "</div>"
         "</div>"
         "</div>"
     )
