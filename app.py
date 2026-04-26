@@ -5,6 +5,7 @@ Asian Avengers · CIS 412 · Spring 2026
 import streamlit as st
 import pandas as pd
 import pickle
+import streamlit.components.v1 as components
 
 # =============================================================================
 # Page config
@@ -17,13 +18,13 @@ st.set_page_config(
 )
 
 # =============================================================================
-# Image URLs (Unsplash CDN, free for commercial use, no attribution required)
+# Image URLs
 # =============================================================================
 HERO_IMAGE = "https://images.unsplash.com/photo-1436491865332-7a61a109cc05?auto=format&fit=crop&w=2400&q=80"
 TICKET_IMAGE = "https://images.unsplash.com/photo-1569154941061-e231b4725ef1?auto=format&fit=crop&w=1600&q=80"
 
 # =============================================================================
-# Theme — deep navy, cream accent, editorial type
+# Theme
 # =============================================================================
 st.markdown("""
 <style>
@@ -31,22 +32,11 @@ st.markdown("""
     #MainMenu, footer, header { visibility: hidden; }
     .stDeployButton { display: none; }
 
-    /* Import fonts */
     @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700;900&family=Inter:wght@300;400;500;600;700&display=swap');
 
-    /* Base */
-    .main, .stApp {
-        background: #0E1116 !important;
-        color: #E8E0D2;
-    }
+    .main, .stApp { background: #0E1116 !important; color: #E8E0D2; }
+    .block-container { padding-top: 2rem !important; padding-bottom: 4rem !important; max-width: 1100px !important; }
 
-    .block-container {
-        padding-top: 2rem !important;
-        padding-bottom: 4rem !important;
-        max-width: 1100px !important;
-    }
-
-    /* Typography */
     body, p, .stMarkdown {
         font-family: 'Inter', -apple-system, sans-serif !important;
         color: #E8E0D2 !important;
@@ -57,355 +47,141 @@ st.markdown("""
         color: #E8E0D2 !important;
         letter-spacing: -0.02em;
     }
-
-    h1 {
-        font-size: 4rem !important;
-        font-weight: 700 !important;
-        line-height: 1.05 !important;
-        margin-bottom: 0.5rem !important;
-    }
-
-    h2 {
-        font-size: 2.2rem !important;
-        font-weight: 500 !important;
-    }
+    h1 { font-size: 4rem !important; font-weight: 700 !important; line-height: 1.05 !important; margin-bottom: 0.5rem !important; }
+    h2 { font-size: 2.2rem !important; font-weight: 500 !important; }
 
     .eyebrow {
         font-family: 'Inter', sans-serif;
-        font-size: 0.75rem;
-        font-weight: 600;
-        letter-spacing: 0.25em;
-        text-transform: uppercase;
-        color: #C9A77A;
-        margin-bottom: 1rem;
+        font-size: 0.75rem; font-weight: 600;
+        letter-spacing: 0.25em; text-transform: uppercase;
+        color: #C9A77A; margin-bottom: 1rem;
     }
-
     .subtitle {
-        font-size: 1.05rem;
-        color: #9A9486 !important;
-        line-height: 1.6;
-        max-width: 620px;
-        margin-top: 1rem;
+        font-size: 1.05rem; color: #9A9486 !important;
+        line-height: 1.6; max-width: 620px; margin-top: 1rem;
     }
 
-    /* Hero image with gradient overlay */
+    /* Hero image */
     .hero-image-wrap {
-        position: relative;
-        margin: 2rem 0 3rem 0;
-        border-radius: 24px;
-        overflow: hidden;
-        height: 380px;
+        position: relative; margin: 2rem 0 3rem 0;
+        border-radius: 24px; overflow: hidden; height: 380px;
     }
     .hero-image-wrap img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
+        width: 100%; height: 100%; object-fit: cover;
         filter: brightness(0.55) saturate(0.9);
     }
     .hero-image-wrap::after {
-        content: '';
-        position: absolute;
-        inset: 0;
+        content: ''; position: absolute; inset: 0;
         background: linear-gradient(135deg, rgba(14,17,22,0.4) 0%, rgba(14,17,22,0.85) 100%);
     }
     .hero-overlay {
-        position: absolute;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        padding: 2.5rem 3rem;
-        z-index: 2;
-        color: #E8E0D2;
+        position: absolute; bottom: 0; left: 0; right: 0;
+        padding: 2.5rem 3rem; z-index: 2; color: #E8E0D2;
     }
     .hero-overlay-title {
         font-family: 'Playfair Display', serif;
-        font-size: 2.4rem;
-        font-weight: 600;
-        line-height: 1.1;
-        font-style: italic;
-        color: #E8E0D2;
+        font-size: 2.4rem; font-weight: 600; line-height: 1.1;
+        font-style: italic; color: #E8E0D2;
     }
     .hero-overlay-sub {
-        font-size: 0.95rem;
-        color: #C9A77A;
-        margin-top: 0.5rem;
+        font-size: 0.95rem; color: #C9A77A; margin-top: 0.5rem;
         letter-spacing: 0.05em;
     }
 
     /* Form labels */
     .stSelectbox > label, .stSlider > label, .stNumberInput > label {
-        font-size: 0.7rem !important;
-        font-weight: 600 !important;
-        letter-spacing: 0.18em !important;
-        text-transform: uppercase !important;
-        color: #9A9486 !important;
-        margin-bottom: 0.4rem !important;
+        font-size: 0.7rem !important; font-weight: 600 !important;
+        letter-spacing: 0.18em !important; text-transform: uppercase !important;
+        color: #9A9486 !important; margin-bottom: 0.4rem !important;
     }
 
-    /* Selectbox closed state */
+    /* Selectbox */
     div[data-baseweb="select"] > div:first-child {
         background: #161B22 !important;
         border: 1px solid rgba(232, 224, 210, 0.08) !important;
-        border-radius: 10px !important;
-        min-height: 44px !important;
+        border-radius: 10px !important; min-height: 44px !important;
     }
     div[data-baseweb="select"] > div:first-child:hover {
         border-color: rgba(201, 167, 122, 0.4) !important;
     }
     div[data-baseweb="select"] [role="combobox"],
     div[data-baseweb="select"] [aria-selected="true"] {
-        color: #E8E0D2 !important;
-        background: transparent !important;
+        color: #E8E0D2 !important; background: transparent !important;
     }
-
-    /* Selectbox popover */
-    div[data-baseweb="popover"] {
-        background: #161B22 !important;
-    }
+    div[data-baseweb="popover"] { background: #161B22 !important; }
     ul[role="listbox"] {
         background: #161B22 !important;
         border: 1px solid rgba(201, 167, 122, 0.25) !important;
-        border-radius: 10px !important;
-        padding: 0.25rem !important;
+        border-radius: 10px !important; padding: 0.25rem !important;
     }
     li[role="option"] {
-        background: transparent !important;
-        color: #E8E0D2 !important;
-        font-family: 'Inter', sans-serif !important;
-        font-size: 0.95rem !important;
-        padding: 0.6rem 0.85rem !important;
-        border-radius: 6px !important;
+        background: transparent !important; color: #E8E0D2 !important;
+        font-family: 'Inter', sans-serif !important; font-size: 0.95rem !important;
+        padding: 0.6rem 0.85rem !important; border-radius: 6px !important;
     }
     li[role="option"]:hover {
-        background: rgba(201, 167, 122, 0.15) !important;
-        color: #E8E0D2 !important;
+        background: rgba(201, 167, 122, 0.15) !important; color: #E8E0D2 !important;
     }
     li[role="option"][aria-selected="true"] {
-        background: rgba(201, 167, 122, 0.2) !important;
-        color: #C9A77A !important;
+        background: rgba(201, 167, 122, 0.2) !important; color: #C9A77A !important;
     }
 
-    /* Number input */
     .stNumberInput input {
         background: #161B22 !important;
         border: 1px solid rgba(232, 224, 210, 0.08) !important;
-        border-radius: 10px !important;
-        color: #E8E0D2 !important;
+        border-radius: 10px !important; color: #E8E0D2 !important;
     }
 
-    /* Slider */
     .stSlider [data-baseweb="slider"] [role="slider"] {
         background-color: #C9A77A !important;
         box-shadow: 0 0 0 4px rgba(201, 167, 122, 0.15) !important;
     }
-    .stSlider [data-baseweb="slider"] > div > div > div {
-        background: #C9A77A !important;
-    }
-    .stSlider [data-testid="stTickBarMin"],
-    .stSlider [data-testid="stTickBarMax"] {
-        color: #6E6A5E !important;
-        font-size: 0.7rem !important;
+    .stSlider [data-baseweb="slider"] > div > div > div { background: #C9A77A !important; }
+    .stSlider [data-testid="stTickBarMin"], .stSlider [data-testid="stTickBarMax"] {
+        color: #6E6A5E !important; font-size: 0.7rem !important;
     }
 
-    /* Checkbox */
     .stCheckbox label {
-        color: #E8E0D2 !important;
-        font-size: 0.9rem !important;
-        font-weight: 400 !important;
+        color: #E8E0D2 !important; font-size: 0.9rem !important; font-weight: 400 !important;
     }
     .stCheckbox label > div:first-child {
-        background: #161B22 !important;
-        border-color: rgba(232, 224, 210, 0.2) !important;
+        background: #161B22 !important; border-color: rgba(232, 224, 210, 0.2) !important;
     }
 
-    /* Predict button */
     .stButton > button {
-        background: #1E1B16 !important;
-        color: #E8E0D2 !important;
+        background: #1E1B16 !important; color: #E8E0D2 !important;
         border: 2px solid #C9A77A !important;
         padding: 1.1rem 2rem !important;
         font-family: 'Inter', sans-serif !important;
-        font-size: 0.9rem !important;
-        font-weight: 700 !important;
-        letter-spacing: 0.25em !important;
-        text-transform: uppercase !important;
+        font-size: 0.9rem !important; font-weight: 700 !important;
+        letter-spacing: 0.25em !important; text-transform: uppercase !important;
         border-radius: 14px !important;
         transition: all 0.2s ease;
         box-shadow: 0 4px 20px rgba(201, 167, 122, 0.15);
     }
     .stButton > button:hover {
-        background: #C9A77A !important;
-        border-color: #C9A77A !important;
-        color: #0E1116 !important;
-        transform: translateY(-2px);
+        background: #C9A77A !important; border-color: #C9A77A !important;
+        color: #0E1116 !important; transform: translateY(-2px);
         box-shadow: 0 8px 28px rgba(201, 167, 122, 0.4) !important;
     }
-    .stButton > button:active {
-        transform: translateY(0);
-    }
 
-    /* Divider */
     hr {
         border: none !important;
         border-top: 1px solid rgba(232, 224, 210, 0.08) !important;
         margin: 3rem 0 !important;
     }
 
-    /* Boarding-pass-style result card */
-    .ticket {
-        background: linear-gradient(145deg, #1A1F2A 0%, #161B22 100%);
-        border: 1px solid rgba(232, 224, 210, 0.08);
-        border-radius: 24px;
-        padding: 0;
-        position: relative;
-        overflow: hidden;
-        margin-top: 1rem;
-    }
-    .ticket::before {
-        content: '';
-        position: absolute;
-        top: 0; left: 0; right: 0; height: 4px;
-        background: linear-gradient(90deg, #C9A77A, #E8E0D2, #C9A77A);
-        z-index: 3;
-    }
-
-    /* Image banner inside ticket */
-    .ticket-image-wrap {
-        position: relative;
-        height: 220px;
-        overflow: hidden;
-    }
-    .ticket-image-wrap img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-        filter: brightness(0.5) saturate(0.85);
-    }
-    .ticket-image-wrap::after {
-        content: '';
-        position: absolute;
-        inset: 0;
-        background: linear-gradient(180deg, rgba(14,17,22,0.3) 0%, rgba(26,31,42,1) 100%);
-    }
-    .ticket-image-overlay {
-        position: absolute;
-        top: 0; left: 0; right: 0; bottom: 0;
-        z-index: 2;
-        padding: 2.5rem 3rem 1.5rem 3rem;
-        display: flex;
-        flex-direction: column;
-        justify-content: space-between;
-    }
-    .ticket-image-eyebrow {
-        font-family: 'Inter', sans-serif;
-        font-size: 0.7rem;
-        font-weight: 600;
-        letter-spacing: 0.25em;
-        text-transform: uppercase;
-        color: #C9A77A;
-    }
-    .ticket-route {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-    }
-    .ticket-route-code {
-        font-family: 'Playfair Display', serif;
-        font-size: 3rem;
-        font-weight: 700;
-        color: #E8E0D2;
-        letter-spacing: 0.05em;
-        text-shadow: 0 2px 12px rgba(0,0,0,0.5);
-    }
-    .ticket-route-line {
-        flex: 1;
-        margin: 0 1.5rem;
-        position: relative;
-        height: 1px;
-        background: rgba(232, 224, 210, 0.4);
-    }
-    .ticket-route-line::before {
-        content: '✈';
-        position: absolute;
-        left: 50%;
-        top: 50%;
-        transform: translate(-50%, -50%);
-        background: rgba(14,17,22,0.85);
-        padding: 0.4rem 0.8rem;
-        border-radius: 100px;
-        color: #C9A77A;
-        font-size: 1rem;
-        border: 1px solid rgba(201,167,122,0.3);
-    }
-
-    /* Ticket body (below image) */
-    .ticket-body {
-        padding: 2rem 3rem 3rem 3rem;
-    }
-
-    .prob-display {
-        font-family: 'Playfair Display', serif;
-        font-size: 6rem;
-        font-weight: 700;
-        line-height: 1;
-        letter-spacing: -0.04em;
-    }
-
-    .status-pill {
-        display: inline-block;
-        padding: 0.5rem 1.25rem;
-        border-radius: 100px;
-        font-size: 0.75rem;
-        font-weight: 600;
-        letter-spacing: 0.2em;
-        text-transform: uppercase;
-        margin-top: 1rem;
-    }
-    .status-ontime { background: rgba(124, 196, 142, 0.12); color: #7CC48E; border: 1px solid rgba(124, 196, 142, 0.3); }
-    .status-delayed { background: rgba(232, 110, 110, 0.12); color: #E86E6E; border: 1px solid rgba(232, 110, 110, 0.3); }
-    .status-warn { background: rgba(201, 167, 122, 0.12); color: #C9A77A; border: 1px solid rgba(201, 167, 122, 0.3); }
-
-    /* Detail rows */
-    .detail-row {
-        display: flex;
-        justify-content: space-between;
-        padding: 0.75rem 0;
-        border-bottom: 1px dashed rgba(232, 224, 210, 0.08);
-    }
-    .detail-row:last-child { border-bottom: none; }
-    .detail-label {
-        font-size: 0.7rem;
-        letter-spacing: 0.15em;
-        text-transform: uppercase;
-        color: #6E6A5E;
-    }
-    .detail-value {
-        font-size: 0.95rem;
-        color: #E8E0D2;
-        font-weight: 500;
-    }
-
-    /* Stat tiles */
     .stat-tile {
-        background: #161B22;
-        border: 1px solid rgba(232, 224, 210, 0.06);
-        border-radius: 14px;
-        padding: 1.25rem 1.5rem;
-        text-align: left;
+        background: #161B22; border: 1px solid rgba(232, 224, 210, 0.06);
+        border-radius: 14px; padding: 1.25rem 1.5rem; text-align: left;
     }
     .stat-value {
         font-family: 'Playfair Display', serif;
-        font-size: 2rem;
-        font-weight: 600;
-        color: #C9A77A;
-        line-height: 1;
+        font-size: 2rem; font-weight: 600; color: #C9A77A; line-height: 1;
     }
     .stat-label {
-        font-size: 0.65rem;
-        letter-spacing: 0.2em;
-        text-transform: uppercase;
-        color: #6E6A5E;
-        margin-top: 0.5rem;
+        font-size: 0.65rem; letter-spacing: 0.2em;
+        text-transform: uppercase; color: #6E6A5E; margin-top: 0.5rem;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -439,7 +215,6 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# Hero image
 st.markdown(
     f"<div class='hero-image-wrap'>"
     f"<img src='{HERO_IMAGE}' alt='Aerial flight view'/>"
@@ -537,7 +312,7 @@ def build_input_row(carrier, origin, dest, distance, weather, day_week,
 
 
 # =============================================================================
-# Predict button + result card
+# Predict button + animated tilt-card result
 # =============================================================================
 if st.button("RUN PREDICTION", use_container_width=True):
     input_df = build_input_row(
@@ -553,13 +328,17 @@ if st.button("RUN PREDICTION", use_container_width=True):
     ontime_prob = probabilities[0]
 
     if delay_prob >= 0.7:
-        status_text, status_class, status_color = "HIGH DELAY RISK", "status-delayed", "#E86E6E"
+        status_text, status_color = "HIGH RISK", "#E86E6E"
+        glow_color = "rgba(232, 110, 110, 0.4)"
     elif delay_prob >= 0.5:
-        status_text, status_class, status_color = "MODERATE RISK", "status-warn", "#C9A77A"
+        status_text, status_color = "MODERATE RISK", "#C9A77A"
+        glow_color = "rgba(201, 167, 122, 0.4)"
     elif delay_prob >= 0.3:
-        status_text, status_class, status_color = "LOW RISK", "status-warn", "#C9A77A"
+        status_text, status_color = "LOW RISK", "#C9A77A"
+        glow_color = "rgba(201, 167, 122, 0.4)"
     else:
-        status_text, status_class, status_color = "ON-TIME EXPECTED", "status-ontime", "#7CC48E"
+        status_text, status_color = "ON-TIME", "#7CC48E"
+        glow_color = "rgba(124, 196, 142, 0.4)"
 
     formatted_time = f"{dep_hour:02d}:{dep_minute:02d}"
     carrier_name = carrier_dict[carrier_label]
@@ -567,44 +346,322 @@ if st.button("RUN PREDICTION", use_container_width=True):
     weather_text = "Adverse" if weather else "Clear"
     model_name = "Random Forest" if model_choice == "random_forest" else "Logistic Regression"
 
-    # Build entire ticket as ONE concatenated string with NO blank lines
-    # (blank lines inside a markdown block break Streamlit's HTML rendering)
-    ticket_html = (
-        "<div class='ticket'>"
-        # ----- Image banner with route overlay -----
-        "<div class='ticket-image-wrap'>"
-        f"<img src='{TICKET_IMAGE}' alt='Flight'/>"
-        "<div class='ticket-image-overlay'>"
-        "<div class='ticket-image-eyebrow'>PREDICTION RESULT</div>"
-        "<div class='ticket-route'>"
-        f"<div class='ticket-route-code'>{origin_label}</div>"
-        "<div class='ticket-route-line'></div>"
-        f"<div class='ticket-route-code'>{dest_label}</div>"
-        "</div>"
-        "</div>"
-        "</div>"
-        # ----- Ticket body -----
-        "<div class='ticket-body'>"
-        "<div style='display:flex; justify-content:space-between; align-items:flex-end; margin-bottom: 2rem;'>"
-        "<div>"
-        f"<div class='prob-display' style='color:{status_color};'>{delay_prob*100:.1f}%</div>"
-        "<div class='stat-label'>DELAY PROBABILITY</div>"
-        f"<div class='status-pill {status_class}'>{status_text}</div>"
-        "</div>"
-        "<div style='text-align:right;'>"
-        f"<div style='font-family:Playfair Display,serif; font-size:2rem; font-weight:600; color:#E8E0D2;'>{formatted_time}</div>"
-        "<div class='stat-label'>SCHEDULED DEPARTURE</div>"
-        "</div>"
-        "</div>"
-        "<div>"
-        f"<div class='detail-row'><div class='detail-label'>Carrier</div><div class='detail-value'>{carrier_name}</div></div>"
-        f"<div class='detail-row'><div class='detail-label'>Day</div><div class='detail-value'>{day_name}, Day {day_of_month}</div></div>"
-        f"<div class='detail-row'><div class='detail-label'>Distance</div><div class='detail-value'>{distance} miles</div></div>"
-        f"<div class='detail-row'><div class='detail-label'>Weather</div><div class='detail-value'>{weather_text}</div></div>"
-        f"<div class='detail-row'><div class='detail-label'>On-Time Probability</div><div class='detail-value'>{ontime_prob*100:.1f}%</div></div>"
-        f"<div class='detail-row'><div class='detail-label'>Model</div><div class='detail-value'>{model_name}</div></div>"
-        "</div>"
-        "</div>"
-        "</div>"
-    )
-    st.markdown(ticket_html, unsafe_allow_html=True)
+    # =========================================================================
+    # Render the tilt-card via Streamlit's HTML component (gives JS access)
+    # =========================================================================
+    tilt_card_html = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700;900&family=Inter:wght@300;400;500;600;700&display=swap');
+
+        * {{ box-sizing: border-box; margin: 0; padding: 0; }}
+
+        body {{
+            background: transparent;
+            font-family: 'Inter', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 560px;
+            padding: 1rem;
+            perspective: 1500px;
+        }}
+
+        /* Card container — 3D context */
+        .tilt-wrapper {{
+            width: 420px;
+            height: 540px;
+            perspective: 1500px;
+            opacity: 0;
+            transform: translateY(20px);
+            animation: cardEnter 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.1s forwards;
+        }}
+
+        @keyframes cardEnter {{
+            to {{ opacity: 1; transform: translateY(0); }}
+        }}
+
+        .tilt-card {{
+            width: 100%;
+            height: 100%;
+            position: relative;
+            border-radius: 24px;
+            overflow: hidden;
+            background: linear-gradient(145deg, #1A1F2A 0%, #161B22 100%);
+            border: 1px solid rgba(232, 224, 210, 0.08);
+            transform-style: preserve-3d;
+            transition: transform 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+            box-shadow:
+                0 20px 60px rgba(0, 0, 0, 0.5),
+                0 0 60px {glow_color};
+            cursor: pointer;
+        }}
+
+        /* Top accent line */
+        .tilt-card::before {{
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; height: 4px;
+            background: linear-gradient(90deg, #C9A77A, #E8E0D2, #C9A77A);
+            z-index: 5;
+        }}
+
+        /* Mouse-tracked shine effect */
+        .shine {{
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            border-radius: 24px;
+            background: radial-gradient(
+                circle at var(--mx, 50%) var(--my, 50%),
+                rgba(201, 167, 122, 0.18) 0%,
+                rgba(201, 167, 122, 0) 50%
+            );
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+            z-index: 4;
+        }}
+        .tilt-card:hover .shine {{ opacity: 1; }}
+
+        /* Image banner */
+        .card-image-wrap {{
+            position: relative;
+            height: 180px;
+            overflow: hidden;
+            transform: translateZ(20px);
+        }}
+        .card-image-wrap img {{
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            filter: brightness(0.5) saturate(0.85);
+        }}
+        .card-image-wrap::after {{
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(180deg, rgba(14,17,22,0.3) 0%, rgba(26,31,42,1) 100%);
+        }}
+        .card-image-overlay {{
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            z-index: 2;
+            padding: 1.5rem 1.75rem 1rem 1.75rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }}
+        .card-eyebrow {{
+            font-size: 0.65rem;
+            font-weight: 600;
+            letter-spacing: 0.25em;
+            text-transform: uppercase;
+            color: #C9A77A;
+        }}
+        .card-route {{
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }}
+        .card-route-code {{
+            font-family: 'Playfair Display', serif;
+            font-size: 2.2rem;
+            font-weight: 700;
+            color: #E8E0D2;
+            letter-spacing: 0.05em;
+            text-shadow: 0 2px 12px rgba(0,0,0,0.5);
+        }}
+        .card-route-line {{
+            flex: 1;
+            margin: 0 0.8rem;
+            position: relative;
+            height: 1px;
+            background: rgba(232, 224, 210, 0.4);
+        }}
+        .card-route-line::before {{
+            content: '✈';
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(14,17,22,0.85);
+            padding: 0.3rem 0.6rem;
+            border-radius: 100px;
+            color: #C9A77A;
+            font-size: 0.85rem;
+            border: 1px solid rgba(201,167,122,0.3);
+        }}
+
+        /* Body */
+        .card-body {{
+            padding: 1.25rem 1.75rem 1.5rem 1.75rem;
+            transform: translateZ(30px);
+        }}
+
+        .prob-row {{
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            margin-bottom: 1.25rem;
+        }}
+        .prob-num {{
+            font-family: 'Playfair Display', serif;
+            font-size: 3.5rem;
+            font-weight: 700;
+            line-height: 1;
+            letter-spacing: -0.04em;
+            color: {status_color};
+            transform: translateZ(40px);
+        }}
+        .prob-label {{
+            font-size: 0.6rem;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            color: #6E6A5E;
+            margin-top: 0.3rem;
+        }}
+        .time-display {{
+            font-family: 'Playfair Display', serif;
+            font-size: 1.4rem;
+            font-weight: 600;
+            color: #E8E0D2;
+            text-align: right;
+        }}
+        .time-label {{
+            font-size: 0.6rem;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            color: #6E6A5E;
+            margin-top: 0.3rem;
+            text-align: right;
+        }}
+
+        .status-pill {{
+            display: inline-block;
+            padding: 0.4rem 1rem;
+            border-radius: 100px;
+            font-size: 0.65rem;
+            font-weight: 600;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            margin-top: 0.5rem;
+            background: rgba(255, 255, 255, 0.05);
+            color: {status_color};
+            border: 1px solid {status_color}55;
+        }}
+
+        .detail-row {{
+            display: flex;
+            justify-content: space-between;
+            padding: 0.55rem 0;
+            border-bottom: 1px dashed rgba(232, 224, 210, 0.08);
+        }}
+        .detail-row:last-child {{ border-bottom: none; }}
+        .detail-label {{
+            font-size: 0.65rem;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            color: #6E6A5E;
+        }}
+        .detail-value {{
+            font-size: 0.85rem;
+            color: #E8E0D2;
+            font-weight: 500;
+        }}
+    </style>
+    </head>
+    <body>
+        <div class='tilt-wrapper' id='wrapper'>
+            <div class='tilt-card' id='card'>
+                <div class='shine' id='shine'></div>
+
+                <!-- Image banner -->
+                <div class='card-image-wrap'>
+                    <img src='{TICKET_IMAGE}' alt='Flight'/>
+                    <div class='card-image-overlay'>
+                        <div class='card-eyebrow'>PREDICTION</div>
+                        <div class='card-route'>
+                            <div class='card-route-code'>{origin_label}</div>
+                            <div class='card-route-line'></div>
+                            <div class='card-route-code'>{dest_label}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Body -->
+                <div class='card-body'>
+                    <div class='prob-row'>
+                        <div>
+                            <div class='prob-num'>{delay_prob*100:.1f}%</div>
+                            <div class='prob-label'>DELAY PROBABILITY</div>
+                            <div class='status-pill'>{status_text}</div>
+                        </div>
+                        <div>
+                            <div class='time-display'>{formatted_time}</div>
+                            <div class='time-label'>DEPARTURE</div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class='detail-row'>
+                            <div class='detail-label'>Carrier</div>
+                            <div class='detail-value'>{carrier_name}</div>
+                        </div>
+                        <div class='detail-row'>
+                            <div class='detail-label'>Day</div>
+                            <div class='detail-value'>{day_name}, Day {day_of_month}</div>
+                        </div>
+                        <div class='detail-row'>
+                            <div class='detail-label'>Distance</div>
+                            <div class='detail-value'>{distance} mi</div>
+                        </div>
+                        <div class='detail-row'>
+                            <div class='detail-label'>Weather</div>
+                            <div class='detail-value'>{weather_text}</div>
+                        </div>
+                        <div class='detail-row'>
+                            <div class='detail-label'>Model</div>
+                            <div class='detail-value'>{model_name}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            // 3D tilt effect — card rotates based on cursor position
+            const wrapper = document.getElementById('wrapper');
+            const card = document.getElementById('card');
+            const shine = document.getElementById('shine');
+
+            const TILT_RANGE = 12; // degrees of rotation max
+
+            wrapper.addEventListener('mousemove', (e) => {{
+                const rect = card.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+
+                // Calculate rotation based on cursor position relative to card center
+                const centerX = rect.width / 2;
+                const centerY = rect.height / 2;
+                const rotateY = ((x - centerX) / centerX) * TILT_RANGE;
+                const rotateX = -((y - centerY) / centerY) * TILT_RANGE;
+
+                card.style.transform = `rotateX(${{rotateX}}deg) rotateY(${{rotateY}}deg) scale3d(1.02, 1.02, 1.02)`;
+
+                // Update shine position to follow cursor
+                shine.style.setProperty('--mx', `${{(x / rect.width) * 100}}%`);
+                shine.style.setProperty('--my', `${{(y / rect.height) * 100}}%`);
+            }});
+
+            wrapper.addEventListener('mouseleave', () => {{
+                card.style.transform = 'rotateX(0) rotateY(0) scale3d(1, 1, 1)';
+            }});
+        </script>
+    </body>
+    </html>
+    """
+
+    components.html(tilt_card_html, height=580)
