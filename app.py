@@ -17,6 +17,12 @@ st.set_page_config(
 )
 
 # =============================================================================
+# Hero image URLs (Unsplash, free for commercial use, direct CDN)
+# =============================================================================
+HERO_IMAGE = "https://images.unsplash.com/photo-1436491865332-7a61a109cc05?auto=format&fit=crop&w=2400&q=80"
+ACCENT_IMAGE = "https://images.unsplash.com/photo-1569154941061-e231b4725ef1?auto=format&fit=crop&w=1200&q=80"
+
+# =============================================================================
 # Theme — deep navy, cream accent, editorial type
 # =============================================================================
 st.markdown("""
@@ -64,7 +70,6 @@ st.markdown("""
         font-weight: 500 !important;
     }
 
-    /* Eyebrow / kicker text */
     .eyebrow {
         font-family: 'Inter', sans-serif;
         font-size: 0.75rem;
@@ -75,7 +80,6 @@ st.markdown("""
         margin-bottom: 1rem;
     }
 
-    /* Subtitle */
     .subtitle {
         font-size: 1.05rem;
         color: #9A9486 !important;
@@ -84,7 +88,51 @@ st.markdown("""
         margin-top: 1rem;
     }
 
-    /* Form labels — only direct widget labels, not nested popover content */
+    /* Hero image with gradient overlay */
+    .hero-image-wrap {
+        position: relative;
+        margin: 2rem 0 3rem 0;
+        border-radius: 24px;
+        overflow: hidden;
+        height: 380px;
+    }
+    .hero-image-wrap img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        filter: brightness(0.55) saturate(0.9);
+    }
+    .hero-image-wrap::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(135deg, rgba(14,17,22,0.4) 0%, rgba(14,17,22,0.85) 100%);
+    }
+    .hero-overlay {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        padding: 2.5rem 3rem;
+        z-index: 2;
+        color: #E8E0D2;
+    }
+    .hero-overlay-title {
+        font-family: 'Playfair Display', serif;
+        font-size: 2.4rem;
+        font-weight: 600;
+        line-height: 1.1;
+        font-style: italic;
+        color: #E8E0D2;
+    }
+    .hero-overlay-sub {
+        font-size: 0.95rem;
+        color: #C9A77A;
+        margin-top: 0.5rem;
+        letter-spacing: 0.05em;
+    }
+
+    /* Form labels */
     .stSelectbox > label, .stSlider > label, .stNumberInput > label {
         font-size: 0.7rem !important;
         font-weight: 600 !important;
@@ -94,7 +142,7 @@ st.markdown("""
         margin-bottom: 0.4rem !important;
     }
 
-    /* Selectbox CLOSED state — the always-visible field */
+    /* Selectbox closed state */
     div[data-baseweb="select"] > div:first-child {
         background: #161B22 !important;
         border: 1px solid rgba(232, 224, 210, 0.08) !important;
@@ -110,7 +158,7 @@ st.markdown("""
         background: transparent !important;
     }
 
-    /* Selectbox OPEN POPOVER (the dropdown options panel) */
+    /* Selectbox popover */
     div[data-baseweb="popover"] {
         background: #161B22 !important;
     }
@@ -159,7 +207,7 @@ st.markdown("""
         font-size: 0.7rem !important;
     }
 
-    /* Checkbox label */
+    /* Checkbox */
     .stCheckbox label {
         color: #E8E0D2 !important;
         font-size: 0.9rem !important;
@@ -170,7 +218,7 @@ st.markdown("""
         border-color: rgba(232, 224, 210, 0.2) !important;
     }
 
-    /* Predict button — DARKER, high-contrast */
+    /* Predict button — DARK with gold border */
     .stButton > button {
         background: #1E1B16 !important;
         color: #E8E0D2 !important;
@@ -195,13 +243,6 @@ st.markdown("""
     .stButton > button:active {
         transform: translateY(0);
     }
-    .stButton > button:focus,
-    .stButton > button:focus:not(:active) {
-        background: #1E1B16 !important;
-        color: #E8E0D2 !important;
-        border-color: #C9A77A !important;
-        box-shadow: 0 0 0 3px rgba(201, 167, 122, 0.3) !important;
-    }
 
     /* Divider */
     hr {
@@ -218,6 +259,7 @@ st.markdown("""
         padding: 3rem;
         position: relative;
         overflow: hidden;
+        margin-top: 1rem;
     }
     .ticket::before {
         content: '';
@@ -226,14 +268,14 @@ st.markdown("""
         background: linear-gradient(90deg, #C9A77A, #E8E0D2, #C9A77A);
     }
 
-    .route {
+    .route-display {
         display: flex;
         align-items: center;
         justify-content: space-between;
         margin: 1.5rem 0;
-        font-family: 'Playfair Display', serif;
     }
     .route-code {
+        font-family: 'Playfair Display', serif;
         font-size: 3rem;
         font-weight: 700;
         color: #E8E0D2;
@@ -276,21 +318,9 @@ st.markdown("""
         text-transform: uppercase;
         margin-top: 1rem;
     }
-    .status-ontime {
-        background: rgba(124, 196, 142, 0.12);
-        color: #7CC48E;
-        border: 1px solid rgba(124, 196, 142, 0.3);
-    }
-    .status-delayed {
-        background: rgba(232, 110, 110, 0.12);
-        color: #E86E6E;
-        border: 1px solid rgba(232, 110, 110, 0.3);
-    }
-    .status-warn {
-        background: rgba(201, 167, 122, 0.12);
-        color: #C9A77A;
-        border: 1px solid rgba(201, 167, 122, 0.3);
-    }
+    .status-ontime { background: rgba(124, 196, 142, 0.12); color: #7CC48E; border: 1px solid rgba(124, 196, 142, 0.3); }
+    .status-delayed { background: rgba(232, 110, 110, 0.12); color: #E86E6E; border: 1px solid rgba(232, 110, 110, 0.3); }
+    .status-warn { background: rgba(201, 167, 122, 0.12); color: #C9A77A; border: 1px solid rgba(201, 167, 122, 0.3); }
 
     /* Detail rows */
     .detail-row {
@@ -312,7 +342,7 @@ st.markdown("""
         font-weight: 500;
     }
 
-    /* Performance stat tiles */
+    /* Stat tiles */
     .stat-tile {
         background: #161B22;
         border: 1px solid rgba(232, 224, 210, 0.06);
@@ -367,7 +397,16 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-st.markdown("<br>", unsafe_allow_html=True)
+# Hero image with overlay
+st.markdown(f"""
+<div class='hero-image-wrap'>
+    <img src='{HERO_IMAGE}' alt='Aerial flight view'/>
+    <div class='hero-overlay'>
+        <div class='hero-overlay-title'>"Predict the unpredictable."</div>
+        <div class='hero-overlay-sub'>MACHINE LEARNING · AVIATION · OPERATIONS</div>
+    </div>
+</div>
+""", unsafe_allow_html=True)
 
 # =============================================================================
 # MODEL TOGGLE + STATS
@@ -383,33 +422,13 @@ with top_col2:
 metrics = info['model_metrics'][model_choice]
 m_col1, m_col2, m_col3, m_col4 = st.columns(4)
 with m_col1:
-    st.markdown(f"""
-    <div class='stat-tile'>
-        <div class='stat-value'>{metrics['test_accuracy']*100:.1f}%</div>
-        <div class='stat-label'>Test Accuracy</div>
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown(f"<div class='stat-tile'><div class='stat-value'>{metrics['test_accuracy']*100:.1f}%</div><div class='stat-label'>Test Accuracy</div></div>", unsafe_allow_html=True)
 with m_col2:
-    st.markdown(f"""
-    <div class='stat-tile'>
-        <div class='stat-value'>{metrics['test_f1']*100:.1f}%</div>
-        <div class='stat-label'>F1 Score</div>
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown(f"<div class='stat-tile'><div class='stat-value'>{metrics['test_f1']*100:.1f}%</div><div class='stat-label'>F1 Score</div></div>", unsafe_allow_html=True)
 with m_col3:
-    st.markdown(f"""
-    <div class='stat-tile'>
-        <div class='stat-value'>{metrics['test_recall']*100:.1f}%</div>
-        <div class='stat-label'>Recall</div>
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown(f"<div class='stat-tile'><div class='stat-value'>{metrics['test_recall']*100:.1f}%</div><div class='stat-label'>Recall</div></div>", unsafe_allow_html=True)
 with m_col4:
-    st.markdown(f"""
-    <div class='stat-tile'>
-        <div class='stat-value'>{metrics['test_precision']*100:.1f}%</div>
-        <div class='stat-label'>Precision</div>
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown(f"<div class='stat-tile'><div class='stat-value'>{metrics['test_precision']*100:.1f}%</div><div class='stat-label'>Precision</div></div>", unsafe_allow_html=True)
 
 st.markdown("<hr>", unsafe_allow_html=True)
 
@@ -424,40 +443,20 @@ col1, col2 = st.columns(2)
 
 with col1:
     carrier_dict = info['categorical_unique_values']['CARRIER']
-    carrier_label = st.selectbox(
-        "Carrier",
-        options=list(carrier_dict.keys()),
-        format_func=lambda code: carrier_dict[code],
-        index=2,
-    )
+    carrier_label = st.selectbox("Carrier", options=list(carrier_dict.keys()), format_func=lambda code: carrier_dict[code], index=2)
 
     origin_dict = info['categorical_unique_values']['ORIGIN']
-    origin_label = st.selectbox(
-        "Origin Airport",
-        options=list(origin_dict.keys()),
-        format_func=lambda code: origin_dict[code],
-        index=1,
-    )
+    origin_label = st.selectbox("Origin Airport", options=list(origin_dict.keys()), format_func=lambda code: origin_dict[code], index=1)
 
     dest_dict = info['categorical_unique_values']['DEST']
-    dest_label = st.selectbox(
-        "Destination Airport",
-        options=list(dest_dict.keys()),
-        format_func=lambda code: dest_dict[code],
-        index=1,
-    )
+    dest_label = st.selectbox("Destination Airport", options=list(dest_dict.keys()), format_func=lambda code: dest_dict[code], index=1)
 
     distance_min, distance_max, distance_default = info['numeric_ranges']['DISTANCE']
     distance = st.slider("Flight Distance (Miles)", distance_min, distance_max, distance_default)
 
 with col2:
     day_dict = info['categorical_unique_values']['DAY_WEEK']
-    day_week = st.selectbox(
-        "Day of Week",
-        options=list(day_dict.keys()),
-        format_func=lambda d: day_dict[d],
-        index=2,
-    )
+    day_week = st.selectbox("Day of Week", options=list(day_dict.keys()), format_func=lambda d: day_dict[d], index=2)
 
     dom_min, dom_max, dom_default = info['numeric_ranges']['DAY_OF_MONTH']
     day_of_month = st.slider("Day of Month", dom_min, dom_max, dom_default)
@@ -487,106 +486,73 @@ def build_input_row(carrier, origin, dest, distance, weather, day_week,
     row['MONTH'] = 1
     row['CRS_DEP_HOUR'] = dep_hour
     row['CRS_DEP_MINUTE'] = dep_minute
-
     for col_prefix, value in [('CARRIER_', carrier), ('ORIGIN_', origin), ('DEST_', dest)]:
         col = f'{col_prefix}{value}'
         if col in row:
             row[col] = 1
-
     return pd.DataFrame([row])[expected_columns]
 
 
 # =============================================================================
-# Predict button
+# Predict button + result card (split into chunks to avoid Streamlit HTML escape)
 # =============================================================================
 if st.button("RUN PREDICTION", use_container_width=True):
     input_df = build_input_row(
-        carrier=carrier_label,
-        origin=origin_label,
-        dest=dest_label,
-        distance=distance,
-        weather=weather,
-        day_week=day_week,
-        day_of_month=day_of_month,
-        dep_hour=dep_hour,
-        dep_minute=dep_minute,
+        carrier=carrier_label, origin=origin_label, dest=dest_label,
+        distance=distance, weather=weather, day_week=day_week,
+        day_of_month=day_of_month, dep_hour=dep_hour, dep_minute=dep_minute,
         expected_columns=info['expected_columns'],
     )
 
     selected_model = models[model_choice]
-    prediction = selected_model.predict(input_df)[0]
     probabilities = selected_model.predict_proba(input_df)[0]
     delay_prob = probabilities[1]
     ontime_prob = probabilities[0]
 
-    st.markdown("<br>", unsafe_allow_html=True)
-
     if delay_prob >= 0.7:
-        status_text = "HIGH DELAY RISK"
-        status_class = "status-delayed"
-        status_color = "#E86E6E"
+        status_text, status_class, status_color = "HIGH DELAY RISK", "status-delayed", "#E86E6E"
     elif delay_prob >= 0.5:
-        status_text = "MODERATE RISK"
-        status_class = "status-warn"
-        status_color = "#C9A77A"
+        status_text, status_class, status_color = "MODERATE RISK", "status-warn", "#C9A77A"
     elif delay_prob >= 0.3:
-        status_text = "LOW RISK"
-        status_class = "status-warn"
-        status_color = "#C9A77A"
+        status_text, status_class, status_color = "LOW RISK", "status-warn", "#C9A77A"
     else:
-        status_text = "ON-TIME EXPECTED"
-        status_class = "status-ontime"
-        status_color = "#7CC48E"
+        status_text, status_class, status_color = "ON-TIME EXPECTED", "status-ontime", "#7CC48E"
 
     formatted_time = f"{dep_hour:02d}:{dep_minute:02d}"
+    carrier_name = carrier_dict[carrier_label]
+    day_name = day_dict[day_week]
+    weather_text = "Adverse" if weather else "Clear"
+    model_name = "Random Forest" if model_choice == "random_forest" else "Logistic Regression"
 
-    st.markdown(f"""
-    <div class='ticket'>
-        <div class='eyebrow'>PREDICTION RESULT</div>
-
-        <div class='route'>
-            <div class='route-code'>{origin_label}</div>
-            <div class='route-line'></div>
-            <div class='route-code'>{dest_label}</div>
-        </div>
-
-        <div style='display:flex; justify-content:space-between; align-items:flex-end; margin: 2rem 0;'>
-            <div>
-                <div class='prob-display' style='color:{status_color};'>{delay_prob*100:.1f}%</div>
-                <div class='stat-label'>DELAY PROBABILITY</div>
-                <div class='status-pill {status_class}'>{status_text}</div>
-            </div>
-            <div style='text-align:right;'>
-                <div style='font-family:Playfair Display,serif; font-size:2rem; font-weight:600; color:#E8E0D2;'>{formatted_time}</div>
-                <div class='stat-label'>SCHEDULED DEPARTURE</div>
-            </div>
-        </div>
-
-        <div style='margin-top: 2rem;'>
-            <div class='detail-row'>
-                <div class='detail-label'>Carrier</div>
-                <div class='detail-value'>{carrier_dict[carrier_label]}</div>
-            </div>
-            <div class='detail-row'>
-                <div class='detail-label'>Day</div>
-                <div class='detail-value'>{day_dict[day_week]}, Day {day_of_month}</div>
-            </div>
-            <div class='detail-row'>
-                <div class='detail-label'>Distance</div>
-                <div class='detail-value'>{distance} miles</div>
-            </div>
-            <div class='detail-row'>
-                <div class='detail-label'>Weather</div>
-                <div class='detail-value'>{'Adverse' if weather else 'Clear'}</div>
-            </div>
-            <div class='detail-row'>
-                <div class='detail-label'>On-Time Probability</div>
-                <div class='detail-value'>{ontime_prob*100:.1f}%</div>
-            </div>
-            <div class='detail-row'>
-                <div class='detail-label'>Model</div>
-                <div class='detail-value'>{'Random Forest' if model_choice == 'random_forest' else 'Logistic Regression'}</div>
-            </div>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+    # CRITICAL: render the entire ticket as a SINGLE compact f-string with NO blank lines
+    # (Streamlit treats blank lines inside markdown as code blocks, which caused the raw HTML bug)
+    ticket_html = (
+        "<div class='ticket'>"
+        "<div class='eyebrow'>PREDICTION RESULT</div>"
+        "<div class='route-display'>"
+        f"<div class='route-code'>{origin_label}</div>"
+        "<div class='route-line'></div>"
+        f"<div class='route-code'>{dest_label}</div>"
+        "</div>"
+        "<div style='display:flex; justify-content:space-between; align-items:flex-end; margin: 2rem 0;'>"
+        "<div>"
+        f"<div class='prob-display' style='color:{status_color};'>{delay_prob*100:.1f}%</div>"
+        "<div class='stat-label'>DELAY PROBABILITY</div>"
+        f"<div class='status-pill {status_class}'>{status_text}</div>"
+        "</div>"
+        "<div style='text-align:right;'>"
+        f"<div style='font-family:Playfair Display,serif; font-size:2rem; font-weight:600; color:#E8E0D2;'>{formatted_time}</div>"
+        "<div class='stat-label'>SCHEDULED DEPARTURE</div>"
+        "</div>"
+        "</div>"
+        "<div style='margin-top: 2rem;'>"
+        f"<div class='detail-row'><div class='detail-label'>Carrier</div><div class='detail-value'>{carrier_name}</div></div>"
+        f"<div class='detail-row'><div class='detail-label'>Day</div><div class='detail-value'>{day_name}, Day {day_of_month}</div></div>"
+        f"<div class='detail-row'><div class='detail-label'>Distance</div><div class='detail-value'>{distance} miles</div></div>"
+        f"<div class='detail-row'><div class='detail-label'>Weather</div><div class='detail-value'>{weather_text}</div></div>"
+        f"<div class='detail-row'><div class='detail-label'>On-Time Probability</div><div class='detail-value'>{ontime_prob*100:.1f}%</div></div>"
+        f"<div class='detail-row'><div class='detail-label'>Model</div><div class='detail-value'>{model_name}</div></div>"
+        "</div>"
+        "</div>"
+    )
+    st.markdown(ticket_html, unsafe_allow_html=True)
