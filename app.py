@@ -6,7 +6,7 @@ import streamlit as st
 import pandas as pd
 import pickle
 import json
-from datetime import date
+from datetime import date, time
 import streamlit.components.v1 as components
 
 # =============================================================================
@@ -86,7 +86,8 @@ st.markdown("""
         letter-spacing: 0.05em;
     }
 
-    .stSelectbox > label, .stSlider > label, .stNumberInput > label, .stDateInput > label {
+    .stSelectbox > label, .stSlider > label, .stNumberInput > label,
+    .stDateInput > label, .stTimeInput > label {
         font-size: 0.7rem !important; font-weight: 600 !important;
         letter-spacing: 0.18em !important; text-transform: uppercase !important;
         color: #9A9486 !important; margin-bottom: 0.4rem !important;
@@ -122,13 +123,19 @@ st.markdown("""
         background: rgba(201, 167, 122, 0.2) !important; color: #C9A77A !important;
     }
 
-    .stDateInput > div > div {
+    /* Date input + Time input — same dark/cream style */
+    .stDateInput > div > div,
+    .stTimeInput > div > div {
         background: #161B22 !important;
         border: 1px solid rgba(232, 224, 210, 0.08) !important;
         border-radius: 10px !important;
     }
-    .stDateInput > div > div:hover { border-color: rgba(201, 167, 122, 0.4) !important; }
-    .stDateInput input {
+    .stDateInput > div > div:hover,
+    .stTimeInput > div > div:hover {
+        border-color: rgba(201, 167, 122, 0.4) !important;
+    }
+    .stDateInput input,
+    .stTimeInput input {
         background: transparent !important;
         color: #E8E0D2 !important;
         font-family: 'Inter', sans-serif !important;
@@ -167,7 +174,6 @@ st.markdown("""
         box-shadow: 0 8px 28px rgba(201, 167, 122, 0.4) !important;
     }
 
-    /* Secondary button (clear history) — flatter style */
     .clear-btn-wrap .stButton > button {
         background: transparent !important;
         border: 1px solid rgba(232, 224, 210, 0.15) !important;
@@ -307,17 +313,28 @@ with col2:
         help="Training data covers January 2004",
     )
 
-    day_week = flight_date.weekday() + 1  # Mon=1, Sun=7
+    day_week = flight_date.weekday() + 1
     day_of_month = flight_date.day
 
     day_dict = info['categorical_unique_values']['DAY_WEEK']
     st.caption(f"📅 {day_dict[day_week]} · Day {day_of_month} of January 2004")
 
-    h_min, h_max, h_default = info['numeric_ranges']['CRS_DEP_HOUR']
-    dep_hour = st.slider("Scheduled Departure Hour", h_min, h_max, h_default)
+    # ---- Single time picker replaces hour + minute sliders ----
+    departure_time = st.time_input(
+        "Departure Time",
+        value=time(14, 0),  # default 2:00 PM
+        step=300,           # 5-minute steps when using arrows
+        help="Scheduled departure time (browser shows AM/PM)",
+    )
 
-    m_min, m_max, m_default = info['numeric_ranges']['CRS_DEP_MINUTE']
-    dep_minute = st.slider("Scheduled Departure Minute", m_min, m_max, m_default)
+    # Derive hour and minute for the model
+    dep_hour = departure_time.hour
+    dep_minute = departure_time.minute
+
+    # Friendly 12-hour display caption so users have NO doubt about AM/PM
+    period = "AM" if dep_hour < 12 else "PM"
+    display_hour = dep_hour if 1 <= dep_hour <= 12 else (dep_hour - 12 if dep_hour > 12 else 12)
+    st.caption(f"🕐 {display_hour}:{dep_minute:02d} {period}")
 
 st.markdown("<br>", unsafe_allow_html=True)
 weather_checked = st.checkbox("Adverse weather conditions forecasted")
@@ -346,7 +363,7 @@ def build_input_row(carrier, origin, dest, distance, weather, day_week,
 
 
 # =============================================================================
-# Predict button — appends to session_state instead of replacing
+# Predict button — appends to session_state
 # =============================================================================
 if st.button("RUN PREDICTION", use_container_width=True):
     input_df = build_input_row(
@@ -370,7 +387,11 @@ if st.button("RUN PREDICTION", use_container_width=True):
     else:
         status_text, status_color = "ON-TIME", "#7CC48E"
 
-    # Build the prediction record and append
+    # Build 12-hour formatted time for display in the result card
+    period = "AM" if dep_hour < 12 else "PM"
+    display_hour = dep_hour if 1 <= dep_hour <= 12 else (dep_hour - 12 if dep_hour > 12 else 12)
+    pretty_time = f"{display_hour}:{dep_minute:02d} {period}"
+
     prediction_record = {
         "delay_prob": delay_prob,
         "ontime_prob": ontime_prob,
@@ -384,11 +405,10 @@ if st.button("RUN PREDICTION", use_container_width=True):
         "date_full": flight_date.strftime("%b %d, %Y"),
         "date_short": flight_date.strftime("%b %-d"),
         "distance": distance,
-        "dep_time": f"{dep_hour:02d}:{dep_minute:02d}",
+        "dep_time": pretty_time,
         "weather_text": "Adverse" if weather else "Clear",
         "model_name": "Random Forest" if model_choice == "random_forest" else "Logistic Regression",
-        # Auto-subtitle: short summary string for card peeks
-        "subtitle": f"{carrier_label} · {flight_date.strftime('%a')} {dep_hour:02d}:{dep_minute:02d}",
+        "subtitle": f"{carrier_label} · {flight_date.strftime('%a')} {pretty_time}",
     }
     st.session_state.predictions.append(prediction_record)
 
@@ -398,7 +418,6 @@ if st.button("RUN PREDICTION", use_container_width=True):
 predictions = st.session_state.predictions
 
 if len(predictions) == 0:
-    # Empty state
     st.markdown(
         "<div style='text-align:center; padding: 3rem 1rem; border: 1px dashed rgba(232,224,210,0.15); border-radius: 24px; margin-top: 1rem;'>"
         "<div style='font-family: Playfair Display, serif; font-size: 1.5rem; color: #6E6A5E; font-style: italic;'>Your predictions will appear here</div>"
@@ -407,11 +426,9 @@ if len(predictions) == 0:
         unsafe_allow_html=True,
     )
 else:
-    # Pass predictions list to the iframe as JSON
     predictions_json = json.dumps(predictions)
     total = len(predictions)
 
-    # Header with counter and clear button
     hdr_col1, hdr_col2, hdr_col3 = st.columns([1, 2, 1])
     with hdr_col1:
         st.markdown(f"<div class='eyebrow' style='margin-bottom:0; padding-top:1rem;'>PREDICTIONS · {total}</div>", unsafe_allow_html=True)
@@ -436,7 +453,6 @@ else:
             overflow: hidden;
             user-select: none;
         }}
-
         .carousel-container {{
             position: relative;
             width: 100%;
@@ -446,7 +462,6 @@ else:
             justify-content: center;
             perspective: 1500px;
         }}
-
         .carousel-track {{
             position: relative;
             width: 100%;
@@ -455,8 +470,6 @@ else:
             align-items: center;
             justify-content: center;
         }}
-
-        /* Each card positioned absolutely; transform decides where it sits */
         .ticket-card {{
             position: absolute;
             width: 360px;
@@ -478,44 +491,15 @@ else:
             background: linear-gradient(90deg, #C9A77A, #E8E0D2, #C9A77A);
             z-index: 5;
         }}
-
-        /* Position classes — drive the carousel layout */
-        .pos-active {{
-            transform: translateX(0) scale(1) rotateY(0);
-            opacity: 1;
-            z-index: 10;
-        }}
-        .pos-prev {{
-            transform: translateX(-360px) scale(0.78) rotateY(20deg);
-            opacity: 0.5;
-            z-index: 5;
-            filter: brightness(0.7);
-        }}
-        .pos-next {{
-            transform: translateX(360px) scale(0.78) rotateY(-20deg);
-            opacity: 0.5;
-            z-index: 5;
-            filter: brightness(0.7);
-        }}
-        .pos-prev-far {{
-            transform: translateX(-540px) scale(0.6) rotateY(25deg);
-            opacity: 0;
-            z-index: 1;
-            pointer-events: none;
-        }}
-        .pos-next-far {{
-            transform: translateX(540px) scale(0.6) rotateY(-25deg);
-            opacity: 0;
-            z-index: 1;
-            pointer-events: none;
-        }}
-
-        /* Mouse-tracked tilt only on active card */
+        .pos-active {{ transform: translateX(0) scale(1) rotateY(0); opacity: 1; z-index: 10; }}
+        .pos-prev {{ transform: translateX(-360px) scale(0.78) rotateY(20deg); opacity: 0.5; z-index: 5; filter: brightness(0.7); }}
+        .pos-next {{ transform: translateX(360px) scale(0.78) rotateY(-20deg); opacity: 0.5; z-index: 5; filter: brightness(0.7); }}
+        .pos-prev-far {{ transform: translateX(-540px) scale(0.6) rotateY(25deg); opacity: 0; z-index: 1; pointer-events: none; }}
+        .pos-next-far {{ transform: translateX(540px) scale(0.6) rotateY(-25deg); opacity: 0; z-index: 1; pointer-events: none; }}
         .pos-active:hover {{
             box-shadow: 0 25px 70px rgba(0, 0, 0, 0.6),
                         0 0 60px var(--glow, rgba(201, 167, 122, 0.4));
         }}
-
         .shine {{
             position: absolute;
             inset: 0;
@@ -527,8 +511,6 @@ else:
             z-index: 4;
         }}
         .pos-active:hover .shine {{ opacity: 1; }}
-
-        /* Image banner */
         .card-image-wrap {{
             position: relative;
             height: 160px;
@@ -594,7 +576,6 @@ else:
             font-size: 0.75rem;
             border: 1px solid rgba(201,167,122,0.3);
         }}
-
         .card-subtitle {{
             font-size: 0.7rem;
             color: #9A9486;
@@ -602,7 +583,6 @@ else:
             text-transform: uppercase;
             text-shadow: 0 1px 4px rgba(0,0,0,0.5);
         }}
-
         .card-body {{
             padding: 1rem 1.5rem 1.25rem 1.5rem;
         }}
@@ -670,8 +650,6 @@ else:
             color: #E8E0D2;
             font-weight: 500;
         }}
-
-        /* Navigation arrows */
         .nav-arrow {{
             position: absolute;
             top: 50%;
@@ -703,8 +681,6 @@ else:
         }}
         .nav-arrow.prev {{ left: 5%; }}
         .nav-arrow.next {{ right: 5%; }}
-
-        /* Counter */
         .counter {{
             text-align: center;
             margin-top: 1rem;
@@ -719,8 +695,6 @@ else:
             font-family: 'Playfair Display', serif;
             font-weight: 600;
         }}
-
-        /* Dot indicators below counter */
         .dots {{
             display: flex;
             justify-content: center;
@@ -757,19 +731,15 @@ else:
             <span id='counterTotal'>1</span>
         </div>
         <div class='dots' id='dots'></div>
-
         <script>
             const predictions = {predictions_json};
-            // Start with the most recently added prediction in focus
             let activeIndex = predictions.length - 1;
-
             const track = document.getElementById('track');
             const prevBtn = document.getElementById('prevBtn');
             const nextBtn = document.getElementById('nextBtn');
             const counterCurrent = document.getElementById('counterCurrent');
             const counterTotal = document.getElementById('counterTotal');
             const dotsContainer = document.getElementById('dots');
-
             const TILT_RANGE = 10;
 
             function makeCard(p, index) {{
@@ -777,9 +747,7 @@ else:
                 card.className = 'ticket-card';
                 card.dataset.index = index;
                 card.style.setProperty('--glow', `${{p.status_color}}66`);
-
                 const escape = (s) => String(s).replace(/[&<>'"]/g, c => ({{'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}})[c]);
-
                 card.innerHTML = `
                     <div class='shine'></div>
                     <div class='card-image-wrap'>
@@ -809,38 +777,20 @@ else:
                             </div>
                         </div>
                         <div>
-                            <div class='detail-row'>
-                                <div class='detail-label'>Carrier</div>
-                                <div class='detail-value'>${{escape(p.carrier_name)}}</div>
-                            </div>
-                            <div class='detail-row'>
-                                <div class='detail-label'>Date</div>
-                                <div class='detail-value'>${{escape(p.day_name)}}, ${{escape(p.date_full)}}</div>
-                            </div>
-                            <div class='detail-row'>
-                                <div class='detail-label'>Distance</div>
-                                <div class='detail-value'>${{p.distance}} mi</div>
-                            </div>
-                            <div class='detail-row'>
-                                <div class='detail-label'>Weather</div>
-                                <div class='detail-value'>${{escape(p.weather_text)}}</div>
-                            </div>
-                            <div class='detail-row'>
-                                <div class='detail-label'>Model</div>
-                                <div class='detail-value'>${{escape(p.model_name)}}</div>
-                            </div>
+                            <div class='detail-row'><div class='detail-label'>Carrier</div><div class='detail-value'>${{escape(p.carrier_name)}}</div></div>
+                            <div class='detail-row'><div class='detail-label'>Date</div><div class='detail-value'>${{escape(p.day_name)}}, ${{escape(p.date_full)}}</div></div>
+                            <div class='detail-row'><div class='detail-label'>Distance</div><div class='detail-value'>${{p.distance}} mi</div></div>
+                            <div class='detail-row'><div class='detail-label'>Weather</div><div class='detail-value'>${{escape(p.weather_text)}}</div></div>
+                            <div class='detail-row'><div class='detail-label'>Model</div><div class='detail-value'>${{escape(p.model_name)}}</div></div>
                         </div>
                     </div>
                 `;
-
-                // Click to bring this card to active position
                 card.addEventListener('click', () => {{
                     if (parseInt(card.dataset.index) !== activeIndex) {{
                         activeIndex = parseInt(card.dataset.index);
                         render();
                     }}
                 }});
-
                 return card;
             }}
 
@@ -849,102 +799,63 @@ else:
                 cards.forEach(card => {{
                     const idx = parseInt(card.dataset.index);
                     card.classList.remove('pos-active', 'pos-prev', 'pos-next', 'pos-prev-far', 'pos-next-far');
-
-                    if (idx === activeIndex) {{
-                        card.classList.add('pos-active');
-                    }} else if (idx === activeIndex - 1) {{
-                        card.classList.add('pos-prev');
-                    }} else if (idx === activeIndex + 1) {{
-                        card.classList.add('pos-next');
-                    }} else if (idx < activeIndex - 1) {{
-                        card.classList.add('pos-prev-far');
-                    }} else {{
-                        card.classList.add('pos-next-far');
-                    }}
+                    if (idx === activeIndex) card.classList.add('pos-active');
+                    else if (idx === activeIndex - 1) card.classList.add('pos-prev');
+                    else if (idx === activeIndex + 1) card.classList.add('pos-next');
+                    else if (idx < activeIndex - 1) card.classList.add('pos-prev-far');
+                    else card.classList.add('pos-next-far');
                 }});
-
-                // Update counter
                 counterCurrent.textContent = activeIndex + 1;
                 counterTotal.textContent = predictions.length;
-
-                // Update arrows
                 prevBtn.disabled = activeIndex === 0;
                 nextBtn.disabled = activeIndex === predictions.length - 1;
-
-                // Update dots
                 const dots = dotsContainer.querySelectorAll('.dot');
-                dots.forEach((dot, i) => {{
-                    dot.classList.toggle('active', i === activeIndex);
-                }});
+                dots.forEach((dot, i) => dot.classList.toggle('active', i === activeIndex));
             }}
 
-            function render() {{
-                applyPositions();
-            }}
+            function render() {{ applyPositions(); }}
 
-            // Initial build
-            predictions.forEach((p, i) => {{
-                track.appendChild(makeCard(p, i));
-            }});
-
-            // Build dots
+            predictions.forEach((p, i) => track.appendChild(makeCard(p, i)));
             predictions.forEach((_, i) => {{
                 const dot = document.createElement('div');
                 dot.className = 'dot';
-                dot.addEventListener('click', () => {{
-                    activeIndex = i;
-                    render();
-                }});
+                dot.addEventListener('click', () => {{ activeIndex = i; render(); }});
                 dotsContainer.appendChild(dot);
             }});
 
-            // Arrow handlers
-            prevBtn.addEventListener('click', () => {{
-                if (activeIndex > 0) {{ activeIndex--; render(); }}
-            }});
-            nextBtn.addEventListener('click', () => {{
-                if (activeIndex < predictions.length - 1) {{ activeIndex++; render(); }}
-            }});
+            prevBtn.addEventListener('click', () => {{ if (activeIndex > 0) {{ activeIndex--; render(); }} }});
+            nextBtn.addEventListener('click', () => {{ if (activeIndex < predictions.length - 1) {{ activeIndex++; render(); }} }});
 
-            // Keyboard navigation
             document.addEventListener('keydown', (e) => {{
                 if (e.key === 'ArrowLeft' && activeIndex > 0) {{ activeIndex--; render(); }}
                 else if (e.key === 'ArrowRight' && activeIndex < predictions.length - 1) {{ activeIndex++; render(); }}
             }});
 
-            // 3D mouse tilt — only on active card
             document.addEventListener('mousemove', (e) => {{
                 const activeCard = track.querySelector('.pos-active');
                 if (!activeCard) return;
-
                 const rect = activeCard.getBoundingClientRect();
                 const cx = rect.left + rect.width / 2;
                 const cy = rect.top + rect.height / 2;
                 const x = e.clientX - cx;
                 const y = e.clientY - cy;
-
-                // Only apply tilt if cursor is near the active card
                 if (Math.abs(x) < rect.width * 0.8 && Math.abs(y) < rect.height * 0.8) {{
                     const rotateY = (x / (rect.width / 2)) * TILT_RANGE;
                     const rotateX = -(y / (rect.height / 2)) * TILT_RANGE;
                     activeCard.style.transform = `translateX(0) scale(1.02) rotateX(${{rotateX}}deg) rotateY(${{rotateY}}deg)`;
-
                     const shine = activeCard.querySelector('.shine');
                     if (shine) {{
                         shine.style.setProperty('--mx', `${{((e.clientX - rect.left) / rect.width) * 100}}%`);
                         shine.style.setProperty('--my', `${{((e.clientY - rect.top) / rect.height) * 100}}%`);
                     }}
                 }} else {{
-                    // Reset to default active position
                     activeCard.style.transform = '';
                 }}
             }});
 
-            // Initial render
             render();
         </script>
     </body>
     </html>
     """
-
     components.html(carousel_html, height=720)
