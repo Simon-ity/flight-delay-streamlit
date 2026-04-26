@@ -5,7 +5,8 @@ Asian Avengers · CIS 412 · Spring 2026
 import streamlit as st
 import pandas as pd
 import pickle
-from datetime import date, datetime
+import json
+from datetime import date
 import streamlit.components.v1 as components
 
 # =============================================================================
@@ -29,10 +30,8 @@ TICKET_IMAGE = "https://images.unsplash.com/photo-1569154941061-e231b4725ef1?aut
 # =============================================================================
 st.markdown("""
 <style>
-    /* Hide Streamlit chrome */
     #MainMenu, footer, header { visibility: hidden; }
     .stDeployButton { display: none; }
-
     @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700;900&family=Inter:wght@300;400;500;600;700&display=swap');
 
     .main, .stApp { background: #0E1116 !important; color: #E8E0D2; }
@@ -42,7 +41,6 @@ st.markdown("""
         font-family: 'Inter', -apple-system, sans-serif !important;
         color: #E8E0D2 !important;
     }
-
     h1, h2, h3 {
         font-family: 'Playfair Display', Georgia, serif !important;
         color: #E8E0D2 !important;
@@ -62,7 +60,6 @@ st.markdown("""
         line-height: 1.6; max-width: 620px; margin-top: 1rem;
     }
 
-    /* Hero image */
     .hero-image-wrap {
         position: relative; margin: 2rem 0 3rem 0;
         border-radius: 24px; overflow: hidden; height: 380px;
@@ -89,14 +86,12 @@ st.markdown("""
         letter-spacing: 0.05em;
     }
 
-    /* Form labels */
     .stSelectbox > label, .stSlider > label, .stNumberInput > label, .stDateInput > label {
         font-size: 0.7rem !important; font-weight: 600 !important;
         letter-spacing: 0.18em !important; text-transform: uppercase !important;
         color: #9A9486 !important; margin-bottom: 0.4rem !important;
     }
 
-    /* Selectbox */
     div[data-baseweb="select"] > div:first-child {
         background: #161B22 !important;
         border: 1px solid rgba(232, 224, 210, 0.08) !important;
@@ -127,41 +122,16 @@ st.markdown("""
         background: rgba(201, 167, 122, 0.2) !important; color: #C9A77A !important;
     }
 
-    /* Date input — same dark/cream styling */
     .stDateInput > div > div {
         background: #161B22 !important;
         border: 1px solid rgba(232, 224, 210, 0.08) !important;
         border-radius: 10px !important;
     }
-    .stDateInput > div > div:hover {
-        border-color: rgba(201, 167, 122, 0.4) !important;
-    }
+    .stDateInput > div > div:hover { border-color: rgba(201, 167, 122, 0.4) !important; }
     .stDateInput input {
         background: transparent !important;
         color: #E8E0D2 !important;
         font-family: 'Inter', sans-serif !important;
-    }
-    /* Calendar popover */
-    div[data-baseweb="calendar"] {
-        background: #161B22 !important;
-        border: 1px solid rgba(201, 167, 122, 0.25) !important;
-    }
-    div[data-baseweb="calendar"] button {
-        color: #E8E0D2 !important;
-        background: transparent !important;
-    }
-    div[data-baseweb="calendar"] button:hover {
-        background: rgba(201, 167, 122, 0.15) !important;
-    }
-    div[data-baseweb="calendar"] [aria-selected="true"] {
-        background: #C9A77A !important;
-        color: #0E1116 !important;
-    }
-
-    .stNumberInput input {
-        background: #161B22 !important;
-        border: 1px solid rgba(232, 224, 210, 0.08) !important;
-        border-radius: 10px !important; color: #E8E0D2 !important;
     }
 
     .stSlider [data-baseweb="slider"] [role="slider"] {
@@ -197,6 +167,24 @@ st.markdown("""
         box-shadow: 0 8px 28px rgba(201, 167, 122, 0.4) !important;
     }
 
+    /* Secondary button (clear history) — flatter style */
+    .clear-btn-wrap .stButton > button {
+        background: transparent !important;
+        border: 1px solid rgba(232, 224, 210, 0.15) !important;
+        color: #9A9486 !important;
+        padding: 0.5rem 1.2rem !important;
+        font-size: 0.7rem !important;
+        letter-spacing: 0.2em !important;
+        box-shadow: none !important;
+    }
+    .clear-btn-wrap .stButton > button:hover {
+        background: rgba(232, 110, 110, 0.1) !important;
+        border-color: rgba(232, 110, 110, 0.4) !important;
+        color: #E86E6E !important;
+        transform: none !important;
+        box-shadow: none !important;
+    }
+
     hr {
         border: none !important;
         border-top: 1px solid rgba(232, 224, 210, 0.08) !important;
@@ -217,6 +205,12 @@ st.markdown("""
     }
 </style>
 """, unsafe_allow_html=True)
+
+# =============================================================================
+# Initialize session state for prediction history
+# =============================================================================
+if 'predictions' not in st.session_state:
+    st.session_state.predictions = []
 
 # =============================================================================
 # Load model and metadata
@@ -293,49 +287,29 @@ col1, col2 = st.columns(2)
 
 with col1:
     carrier_dict = info['categorical_unique_values']['CARRIER']
-    carrier_label = st.selectbox(
-        "Carrier",
-        options=list(carrier_dict.keys()),
-        format_func=lambda code: carrier_dict[code],
-        index=2,
-    )
+    carrier_label = st.selectbox("Carrier", options=list(carrier_dict.keys()), format_func=lambda code: carrier_dict[code], index=2)
 
     origin_dict = info['categorical_unique_values']['ORIGIN']
-    origin_label = st.selectbox(
-        "Origin Airport",
-        options=list(origin_dict.keys()),
-        format_func=lambda code: origin_dict[code],
-        index=1,
-    )
+    origin_label = st.selectbox("Origin Airport", options=list(origin_dict.keys()), format_func=lambda code: origin_dict[code], index=1)
 
     dest_dict = info['categorical_unique_values']['DEST']
-    dest_label = st.selectbox(
-        "Destination Airport",
-        options=list(dest_dict.keys()),
-        format_func=lambda code: dest_dict[code],
-        index=1,
-    )
+    dest_label = st.selectbox("Destination Airport", options=list(dest_dict.keys()), format_func=lambda code: dest_dict[code], index=1)
 
     distance_min, distance_max, distance_default = info['numeric_ranges']['DISTANCE']
     distance = st.slider("Flight Distance (Miles)", distance_min, distance_max, distance_default)
 
 with col2:
-    # ---- SINGLE date picker replaces Day of Week + Day of Month ----
-    # Training data was January 2004; we let users pick any date and derive both fields
     flight_date = st.date_input(
         "Flight Date",
-        value=date(2004, 1, 15),         # default mid-January 2004
+        value=date(2004, 1, 15),
         min_value=date(2004, 1, 1),
         max_value=date(2004, 1, 31),
-        help="Training data covers January 2004. Pick any date in that range.",
+        help="Training data covers January 2004",
     )
 
-    # Derive day_week (1=Monday ... 7=Sunday) and day_of_month from the picked date
-    # Python's weekday(): Mon=0...Sun=6 → add 1 to match the dataset's 1=Mon...7=Sun
-    day_week = flight_date.weekday() + 1
+    day_week = flight_date.weekday() + 1  # Mon=1, Sun=7
     day_of_month = flight_date.day
 
-    # Show user what was derived (read-only display)
     day_dict = info['categorical_unique_values']['DAY_WEEK']
     st.caption(f"📅 {day_dict[day_week]} · Day {day_of_month} of January 2004")
 
@@ -372,7 +346,7 @@ def build_input_row(carrier, origin, dest, distance, weather, day_week,
 
 
 # =============================================================================
-# Predict button + animated tilt-card result
+# Predict button — appends to session_state instead of replacing
 # =============================================================================
 if st.button("RUN PREDICTION", use_container_width=True):
     input_df = build_input_row(
@@ -384,30 +358,71 @@ if st.button("RUN PREDICTION", use_container_width=True):
 
     selected_model = models[model_choice]
     probabilities = selected_model.predict_proba(input_df)[0]
-    delay_prob = probabilities[1]
-    ontime_prob = probabilities[0]
+    delay_prob = float(probabilities[1])
+    ontime_prob = float(probabilities[0])
 
     if delay_prob >= 0.7:
         status_text, status_color = "HIGH RISK", "#E86E6E"
-        glow_color = "rgba(232, 110, 110, 0.4)"
     elif delay_prob >= 0.5:
         status_text, status_color = "MODERATE RISK", "#C9A77A"
-        glow_color = "rgba(201, 167, 122, 0.4)"
     elif delay_prob >= 0.3:
         status_text, status_color = "LOW RISK", "#C9A77A"
-        glow_color = "rgba(201, 167, 122, 0.4)"
     else:
         status_text, status_color = "ON-TIME", "#7CC48E"
-        glow_color = "rgba(124, 196, 142, 0.4)"
 
-    formatted_time = f"{dep_hour:02d}:{dep_minute:02d}"
-    formatted_date = flight_date.strftime("%b %d, %Y")
-    carrier_name = carrier_dict[carrier_label]
-    day_name = day_dict[day_week]
-    weather_text = "Adverse" if weather else "Clear"
-    model_name = "Random Forest" if model_choice == "random_forest" else "Logistic Regression"
+    # Build the prediction record and append
+    prediction_record = {
+        "delay_prob": delay_prob,
+        "ontime_prob": ontime_prob,
+        "status_text": status_text,
+        "status_color": status_color,
+        "origin": origin_label,
+        "dest": dest_label,
+        "carrier_code": carrier_label,
+        "carrier_name": carrier_dict[carrier_label],
+        "day_name": day_dict[day_week],
+        "date_full": flight_date.strftime("%b %d, %Y"),
+        "date_short": flight_date.strftime("%b %-d"),
+        "distance": distance,
+        "dep_time": f"{dep_hour:02d}:{dep_minute:02d}",
+        "weather_text": "Adverse" if weather else "Clear",
+        "model_name": "Random Forest" if model_choice == "random_forest" else "Logistic Regression",
+        # Auto-subtitle: short summary string for card peeks
+        "subtitle": f"{carrier_label} · {flight_date.strftime('%a')} {dep_hour:02d}:{dep_minute:02d}",
+    }
+    st.session_state.predictions.append(prediction_record)
 
-    tilt_card_html = f"""
+# =============================================================================
+# Results carousel
+# =============================================================================
+predictions = st.session_state.predictions
+
+if len(predictions) == 0:
+    # Empty state
+    st.markdown(
+        "<div style='text-align:center; padding: 3rem 1rem; border: 1px dashed rgba(232,224,210,0.15); border-radius: 24px; margin-top: 1rem;'>"
+        "<div style='font-family: Playfair Display, serif; font-size: 1.5rem; color: #6E6A5E; font-style: italic;'>Your predictions will appear here</div>"
+        "<div style='font-size: 0.85rem; color: #6E6A5E; margin-top: 0.5rem; letter-spacing: 0.05em;'>Click <b>RUN PREDICTION</b> above to add your first card</div>"
+        "</div>",
+        unsafe_allow_html=True,
+    )
+else:
+    # Pass predictions list to the iframe as JSON
+    predictions_json = json.dumps(predictions)
+    total = len(predictions)
+
+    # Header with counter and clear button
+    hdr_col1, hdr_col2, hdr_col3 = st.columns([1, 2, 1])
+    with hdr_col1:
+        st.markdown(f"<div class='eyebrow' style='margin-bottom:0; padding-top:1rem;'>PREDICTIONS · {total}</div>", unsafe_allow_html=True)
+    with hdr_col3:
+        st.markdown("<div class='clear-btn-wrap' style='text-align:right;'>", unsafe_allow_html=True)
+        if st.button("CLEAR HISTORY", key="clear_history"):
+            st.session_state.predictions = []
+            st.rerun()
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    carousel_html = f"""
     <!DOCTYPE html>
     <html>
     <head>
@@ -417,64 +432,110 @@ if st.button("RUN PREDICTION", use_container_width=True):
         body {{
             background: transparent;
             font-family: 'Inter', sans-serif;
+            min-height: 700px;
+            overflow: hidden;
+            user-select: none;
+        }}
+
+        .carousel-container {{
+            position: relative;
+            width: 100%;
+            height: 640px;
             display: flex;
-            justify-content: center;
             align-items: center;
-            min-height: 580px;
-            padding: 1rem;
+            justify-content: center;
             perspective: 1500px;
         }}
-        .tilt-wrapper {{
-            width: 420px;
-            height: 560px;
-            perspective: 1500px;
-            opacity: 0;
-            transform: translateY(20px);
-            animation: cardEnter 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.1s forwards;
-        }}
-        @keyframes cardEnter {{
-            to {{ opacity: 1; transform: translateY(0); }}
-        }}
-        .tilt-card {{
+
+        .carousel-track {{
+            position: relative;
             width: 100%;
             height: 100%;
-            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }}
+
+        /* Each card positioned absolutely; transform decides where it sits */
+        .ticket-card {{
+            position: absolute;
+            width: 360px;
+            height: 540px;
             border-radius: 24px;
             overflow: hidden;
             background: linear-gradient(145deg, #1A1F2A 0%, #161B22 100%);
             border: 1px solid rgba(232, 224, 210, 0.08);
             transform-style: preserve-3d;
-            transition: transform 0.15s cubic-bezier(0.16, 1, 0.3, 1);
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), 0 0 60px {glow_color};
+            transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1),
+                        opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
             cursor: pointer;
         }}
-        .tilt-card::before {{
+        .ticket-card::before {{
             content: '';
             position: absolute;
             top: 0; left: 0; right: 0; height: 4px;
             background: linear-gradient(90deg, #C9A77A, #E8E0D2, #C9A77A);
             z-index: 5;
         }}
+
+        /* Position classes — drive the carousel layout */
+        .pos-active {{
+            transform: translateX(0) scale(1) rotateY(0);
+            opacity: 1;
+            z-index: 10;
+        }}
+        .pos-prev {{
+            transform: translateX(-360px) scale(0.78) rotateY(20deg);
+            opacity: 0.5;
+            z-index: 5;
+            filter: brightness(0.7);
+        }}
+        .pos-next {{
+            transform: translateX(360px) scale(0.78) rotateY(-20deg);
+            opacity: 0.5;
+            z-index: 5;
+            filter: brightness(0.7);
+        }}
+        .pos-prev-far {{
+            transform: translateX(-540px) scale(0.6) rotateY(25deg);
+            opacity: 0;
+            z-index: 1;
+            pointer-events: none;
+        }}
+        .pos-next-far {{
+            transform: translateX(540px) scale(0.6) rotateY(-25deg);
+            opacity: 0;
+            z-index: 1;
+            pointer-events: none;
+        }}
+
+        /* Mouse-tracked tilt only on active card */
+        .pos-active:hover {{
+            box-shadow: 0 25px 70px rgba(0, 0, 0, 0.6),
+                        0 0 60px var(--glow, rgba(201, 167, 122, 0.4));
+        }}
+
         .shine {{
             position: absolute;
-            top: 0; left: 0; right: 0; bottom: 0;
+            inset: 0;
             border-radius: 24px;
-            background: radial-gradient(circle at var(--mx, 50%) var(--my, 50%), rgba(201, 167, 122, 0.18) 0%, rgba(201, 167, 122, 0) 50%);
+            background: radial-gradient(circle at var(--mx, 50%) var(--my, 50%), rgba(201, 167, 122, 0.2) 0%, rgba(201, 167, 122, 0) 50%);
             opacity: 0;
             transition: opacity 0.3s ease;
             pointer-events: none;
             z-index: 4;
         }}
-        .tilt-card:hover .shine {{ opacity: 1; }}
+        .pos-active:hover .shine {{ opacity: 1; }}
+
+        /* Image banner */
         .card-image-wrap {{
             position: relative;
-            height: 180px;
+            height: 160px;
             overflow: hidden;
-            transform: translateZ(20px);
         }}
         .card-image-wrap img {{
-            width: 100%;
-            height: 100%;
+            width: 100%; height: 100%;
             object-fit: cover;
             filter: brightness(0.5) saturate(0.85);
         }}
@@ -488,13 +549,13 @@ if st.button("RUN PREDICTION", use_container_width=True):
             position: absolute;
             top: 0; left: 0; right: 0; bottom: 0;
             z-index: 2;
-            padding: 1.5rem 1.75rem 1rem 1.75rem;
+            padding: 1.25rem 1.5rem 0.75rem 1.5rem;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
         }}
         .card-eyebrow {{
-            font-size: 0.65rem;
+            font-size: 0.6rem;
             font-weight: 600;
             letter-spacing: 0.25em;
             text-transform: uppercase;
@@ -507,7 +568,7 @@ if st.button("RUN PREDICTION", use_container_width=True):
         }}
         .card-route-code {{
             font-family: 'Playfair Display', serif;
-            font-size: 2.2rem;
+            font-size: 1.9rem;
             font-weight: 700;
             color: #E8E0D2;
             letter-spacing: 0.05em;
@@ -515,7 +576,7 @@ if st.button("RUN PREDICTION", use_container_width=True):
         }}
         .card-route-line {{
             flex: 1;
-            margin: 0 0.8rem;
+            margin: 0 0.6rem;
             position: relative;
             height: 1px;
             background: rgba(232, 224, 210, 0.4);
@@ -527,33 +588,39 @@ if st.button("RUN PREDICTION", use_container_width=True):
             top: 50%;
             transform: translate(-50%, -50%);
             background: rgba(14,17,22,0.85);
-            padding: 0.3rem 0.6rem;
+            padding: 0.25rem 0.55rem;
             border-radius: 100px;
             color: #C9A77A;
-            font-size: 0.85rem;
+            font-size: 0.75rem;
             border: 1px solid rgba(201,167,122,0.3);
         }}
+
+        .card-subtitle {{
+            font-size: 0.7rem;
+            color: #9A9486;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            text-shadow: 0 1px 4px rgba(0,0,0,0.5);
+        }}
+
         .card-body {{
-            padding: 1.25rem 1.75rem 1.5rem 1.75rem;
-            transform: translateZ(30px);
+            padding: 1rem 1.5rem 1.25rem 1.5rem;
         }}
         .prob-row {{
             display: flex;
             justify-content: space-between;
             align-items: flex-end;
-            margin-bottom: 1.25rem;
+            margin-bottom: 1rem;
         }}
         .prob-num {{
             font-family: 'Playfair Display', serif;
-            font-size: 3.5rem;
+            font-size: 3rem;
             font-weight: 700;
             line-height: 1;
             letter-spacing: -0.04em;
-            color: {status_color};
-            transform: translateZ(40px);
         }}
         .prob-label {{
-            font-size: 0.6rem;
+            font-size: 0.55rem;
             letter-spacing: 0.2em;
             text-transform: uppercase;
             color: #6E6A5E;
@@ -561,13 +628,13 @@ if st.button("RUN PREDICTION", use_container_width=True):
         }}
         .time-display {{
             font-family: 'Playfair Display', serif;
-            font-size: 1.4rem;
+            font-size: 1.2rem;
             font-weight: 600;
             color: #E8E0D2;
             text-align: right;
         }}
         .time-label {{
-            font-size: 0.6rem;
+            font-size: 0.55rem;
             letter-spacing: 0.2em;
             text-transform: uppercase;
             color: #6E6A5E;
@@ -576,112 +643,308 @@ if st.button("RUN PREDICTION", use_container_width=True):
         }}
         .status-pill {{
             display: inline-block;
-            padding: 0.4rem 1rem;
+            padding: 0.35rem 0.85rem;
             border-radius: 100px;
-            font-size: 0.65rem;
+            font-size: 0.6rem;
             font-weight: 600;
             letter-spacing: 0.2em;
             text-transform: uppercase;
-            margin-top: 0.5rem;
+            margin-top: 0.4rem;
             background: rgba(255, 255, 255, 0.05);
-            color: {status_color};
-            border: 1px solid {status_color}55;
         }}
         .detail-row {{
             display: flex;
             justify-content: space-between;
-            padding: 0.55rem 0;
+            padding: 0.45rem 0;
             border-bottom: 1px dashed rgba(232, 224, 210, 0.08);
         }}
         .detail-row:last-child {{ border-bottom: none; }}
         .detail-label {{
-            font-size: 0.65rem;
+            font-size: 0.6rem;
             letter-spacing: 0.15em;
             text-transform: uppercase;
             color: #6E6A5E;
         }}
         .detail-value {{
-            font-size: 0.85rem;
+            font-size: 0.8rem;
             color: #E8E0D2;
             font-weight: 500;
+        }}
+
+        /* Navigation arrows */
+        .nav-arrow {{
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: rgba(22, 27, 34, 0.9);
+            border: 1px solid rgba(201, 167, 122, 0.3);
+            color: #C9A77A;
+            font-size: 1.2rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 20;
+            transition: all 0.2s ease;
+            backdrop-filter: blur(10px);
+        }}
+        .nav-arrow:hover:not(:disabled) {{
+            background: #C9A77A;
+            color: #0E1116;
+            border-color: #C9A77A;
+            transform: translateY(-50%) scale(1.1);
+        }}
+        .nav-arrow:disabled {{
+            opacity: 0.25;
+            cursor: not-allowed;
+        }}
+        .nav-arrow.prev {{ left: 5%; }}
+        .nav-arrow.next {{ right: 5%; }}
+
+        /* Counter */
+        .counter {{
+            text-align: center;
+            margin-top: 1rem;
+            font-size: 0.7rem;
+            letter-spacing: 0.3em;
+            color: #6E6A5E;
+            font-weight: 500;
+        }}
+        .counter-current {{
+            color: #C9A77A;
+            font-size: 1rem;
+            font-family: 'Playfair Display', serif;
+            font-weight: 600;
+        }}
+
+        /* Dot indicators below counter */
+        .dots {{
+            display: flex;
+            justify-content: center;
+            gap: 6px;
+            margin-top: 0.75rem;
+        }}
+        .dot {{
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: rgba(232, 224, 210, 0.2);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }}
+        .dot.active {{
+            background: #C9A77A;
+            width: 24px;
+            border-radius: 3px;
+        }}
+        .dot:hover:not(.active) {{
+            background: rgba(232, 224, 210, 0.4);
         }}
     </style>
     </head>
     <body>
-        <div class='tilt-wrapper' id='wrapper'>
-            <div class='tilt-card' id='card'>
-                <div class='shine' id='shine'></div>
-                <div class='card-image-wrap'>
-                    <img src='{TICKET_IMAGE}' alt='Flight'/>
-                    <div class='card-image-overlay'>
-                        <div class='card-eyebrow'>PREDICTION</div>
-                        <div class='card-route'>
-                            <div class='card-route-code'>{origin_label}</div>
-                            <div class='card-route-line'></div>
-                            <div class='card-route-code'>{dest_label}</div>
-                        </div>
-                    </div>
-                </div>
-                <div class='card-body'>
-                    <div class='prob-row'>
-                        <div>
-                            <div class='prob-num'>{delay_prob*100:.1f}%</div>
-                            <div class='prob-label'>DELAY PROBABILITY</div>
-                            <div class='status-pill'>{status_text}</div>
-                        </div>
-                        <div>
-                            <div class='time-display'>{formatted_time}</div>
-                            <div class='time-label'>DEPARTURE</div>
-                        </div>
-                    </div>
-                    <div>
-                        <div class='detail-row'>
-                            <div class='detail-label'>Carrier</div>
-                            <div class='detail-value'>{carrier_name}</div>
-                        </div>
-                        <div class='detail-row'>
-                            <div class='detail-label'>Date</div>
-                            <div class='detail-value'>{day_name}, {formatted_date}</div>
-                        </div>
-                        <div class='detail-row'>
-                            <div class='detail-label'>Distance</div>
-                            <div class='detail-value'>{distance} mi</div>
-                        </div>
-                        <div class='detail-row'>
-                            <div class='detail-label'>Weather</div>
-                            <div class='detail-value'>{weather_text}</div>
-                        </div>
-                        <div class='detail-row'>
-                            <div class='detail-label'>Model</div>
-                            <div class='detail-value'>{model_name}</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+        <div class='carousel-container' id='carousel'>
+            <button class='nav-arrow prev' id='prevBtn' aria-label='Previous'>‹</button>
+            <div class='carousel-track' id='track'></div>
+            <button class='nav-arrow next' id='nextBtn' aria-label='Next'>›</button>
         </div>
+        <div class='counter'>
+            <span class='counter-current' id='counterCurrent'>1</span>
+            <span style='margin: 0 0.5rem;'>/</span>
+            <span id='counterTotal'>1</span>
+        </div>
+        <div class='dots' id='dots'></div>
+
         <script>
-            const wrapper = document.getElementById('wrapper');
-            const card = document.getElementById('card');
-            const shine = document.getElementById('shine');
-            const TILT_RANGE = 12;
-            wrapper.addEventListener('mousemove', (e) => {{
-                const rect = card.getBoundingClientRect();
-                const x = e.clientX - rect.left;
-                const y = e.clientY - rect.top;
-                const centerX = rect.width / 2;
-                const centerY = rect.height / 2;
-                const rotateY = ((x - centerX) / centerX) * TILT_RANGE;
-                const rotateX = -((y - centerY) / centerY) * TILT_RANGE;
-                card.style.transform = `rotateX(${{rotateX}}deg) rotateY(${{rotateY}}deg) scale3d(1.02, 1.02, 1.02)`;
-                shine.style.setProperty('--mx', `${{(x / rect.width) * 100}}%`);
-                shine.style.setProperty('--my', `${{(y / rect.height) * 100}}%`);
+            const predictions = {predictions_json};
+            // Start with the most recently added prediction in focus
+            let activeIndex = predictions.length - 1;
+
+            const track = document.getElementById('track');
+            const prevBtn = document.getElementById('prevBtn');
+            const nextBtn = document.getElementById('nextBtn');
+            const counterCurrent = document.getElementById('counterCurrent');
+            const counterTotal = document.getElementById('counterTotal');
+            const dotsContainer = document.getElementById('dots');
+
+            const TILT_RANGE = 10;
+
+            function makeCard(p, index) {{
+                const card = document.createElement('div');
+                card.className = 'ticket-card';
+                card.dataset.index = index;
+                card.style.setProperty('--glow', `${{p.status_color}}66`);
+
+                const escape = (s) => String(s).replace(/[&<>'"]/g, c => ({{'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}})[c]);
+
+                card.innerHTML = `
+                    <div class='shine'></div>
+                    <div class='card-image-wrap'>
+                        <img src='{TICKET_IMAGE}' alt='Flight'/>
+                        <div class='card-image-overlay'>
+                            <div style='display:flex; justify-content:space-between; align-items:flex-start;'>
+                                <div class='card-eyebrow'>PREDICTION #${{index + 1}}</div>
+                                <div class='card-subtitle'>${{escape(p.subtitle)}}</div>
+                            </div>
+                            <div class='card-route'>
+                                <div class='card-route-code'>${{escape(p.origin)}}</div>
+                                <div class='card-route-line'></div>
+                                <div class='card-route-code'>${{escape(p.dest)}}</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class='card-body'>
+                        <div class='prob-row'>
+                            <div>
+                                <div class='prob-num' style='color:${{p.status_color}};'>${{(p.delay_prob * 100).toFixed(1)}}%</div>
+                                <div class='prob-label'>DELAY PROBABILITY</div>
+                                <div class='status-pill' style='color:${{p.status_color}}; border:1px solid ${{p.status_color}}55;'>${{escape(p.status_text)}}</div>
+                            </div>
+                            <div>
+                                <div class='time-display'>${{escape(p.dep_time)}}</div>
+                                <div class='time-label'>DEPARTURE</div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class='detail-row'>
+                                <div class='detail-label'>Carrier</div>
+                                <div class='detail-value'>${{escape(p.carrier_name)}}</div>
+                            </div>
+                            <div class='detail-row'>
+                                <div class='detail-label'>Date</div>
+                                <div class='detail-value'>${{escape(p.day_name)}}, ${{escape(p.date_full)}}</div>
+                            </div>
+                            <div class='detail-row'>
+                                <div class='detail-label'>Distance</div>
+                                <div class='detail-value'>${{p.distance}} mi</div>
+                            </div>
+                            <div class='detail-row'>
+                                <div class='detail-label'>Weather</div>
+                                <div class='detail-value'>${{escape(p.weather_text)}}</div>
+                            </div>
+                            <div class='detail-row'>
+                                <div class='detail-label'>Model</div>
+                                <div class='detail-value'>${{escape(p.model_name)}}</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                // Click to bring this card to active position
+                card.addEventListener('click', () => {{
+                    if (parseInt(card.dataset.index) !== activeIndex) {{
+                        activeIndex = parseInt(card.dataset.index);
+                        render();
+                    }}
+                }});
+
+                return card;
+            }}
+
+            function applyPositions() {{
+                const cards = track.querySelectorAll('.ticket-card');
+                cards.forEach(card => {{
+                    const idx = parseInt(card.dataset.index);
+                    card.classList.remove('pos-active', 'pos-prev', 'pos-next', 'pos-prev-far', 'pos-next-far');
+
+                    if (idx === activeIndex) {{
+                        card.classList.add('pos-active');
+                    }} else if (idx === activeIndex - 1) {{
+                        card.classList.add('pos-prev');
+                    }} else if (idx === activeIndex + 1) {{
+                        card.classList.add('pos-next');
+                    }} else if (idx < activeIndex - 1) {{
+                        card.classList.add('pos-prev-far');
+                    }} else {{
+                        card.classList.add('pos-next-far');
+                    }}
+                }});
+
+                // Update counter
+                counterCurrent.textContent = activeIndex + 1;
+                counterTotal.textContent = predictions.length;
+
+                // Update arrows
+                prevBtn.disabled = activeIndex === 0;
+                nextBtn.disabled = activeIndex === predictions.length - 1;
+
+                // Update dots
+                const dots = dotsContainer.querySelectorAll('.dot');
+                dots.forEach((dot, i) => {{
+                    dot.classList.toggle('active', i === activeIndex);
+                }});
+            }}
+
+            function render() {{
+                applyPositions();
+            }}
+
+            // Initial build
+            predictions.forEach((p, i) => {{
+                track.appendChild(makeCard(p, i));
             }});
-            wrapper.addEventListener('mouseleave', () => {{
-                card.style.transform = 'rotateX(0) rotateY(0) scale3d(1, 1, 1)';
+
+            // Build dots
+            predictions.forEach((_, i) => {{
+                const dot = document.createElement('div');
+                dot.className = 'dot';
+                dot.addEventListener('click', () => {{
+                    activeIndex = i;
+                    render();
+                }});
+                dotsContainer.appendChild(dot);
             }});
+
+            // Arrow handlers
+            prevBtn.addEventListener('click', () => {{
+                if (activeIndex > 0) {{ activeIndex--; render(); }}
+            }});
+            nextBtn.addEventListener('click', () => {{
+                if (activeIndex < predictions.length - 1) {{ activeIndex++; render(); }}
+            }});
+
+            // Keyboard navigation
+            document.addEventListener('keydown', (e) => {{
+                if (e.key === 'ArrowLeft' && activeIndex > 0) {{ activeIndex--; render(); }}
+                else if (e.key === 'ArrowRight' && activeIndex < predictions.length - 1) {{ activeIndex++; render(); }}
+            }});
+
+            // 3D mouse tilt — only on active card
+            document.addEventListener('mousemove', (e) => {{
+                const activeCard = track.querySelector('.pos-active');
+                if (!activeCard) return;
+
+                const rect = activeCard.getBoundingClientRect();
+                const cx = rect.left + rect.width / 2;
+                const cy = rect.top + rect.height / 2;
+                const x = e.clientX - cx;
+                const y = e.clientY - cy;
+
+                // Only apply tilt if cursor is near the active card
+                if (Math.abs(x) < rect.width * 0.8 && Math.abs(y) < rect.height * 0.8) {{
+                    const rotateY = (x / (rect.width / 2)) * TILT_RANGE;
+                    const rotateX = -(y / (rect.height / 2)) * TILT_RANGE;
+                    activeCard.style.transform = `translateX(0) scale(1.02) rotateX(${{rotateX}}deg) rotateY(${{rotateY}}deg)`;
+
+                    const shine = activeCard.querySelector('.shine');
+                    if (shine) {{
+                        shine.style.setProperty('--mx', `${{((e.clientX - rect.left) / rect.width) * 100}}%`);
+                        shine.style.setProperty('--my', `${{((e.clientY - rect.top) / rect.height) * 100}}%`);
+                    }}
+                }} else {{
+                    // Reset to default active position
+                    activeCard.style.transform = '';
+                }}
+            }});
+
+            // Initial render
+            render();
         </script>
     </body>
     </html>
     """
 
-    components.html(tilt_card_html, height=600)
+    components.html(carousel_html, height=720)
